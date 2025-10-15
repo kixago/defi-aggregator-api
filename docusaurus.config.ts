@@ -43,7 +43,7 @@ const config: Config = {
         config: {
           positions: { 
             // NOTE: Path is relative to docs-site, so we look up one directory for openapi.yaml
-            specPath: "../openapi.yaml", 
+            specPath: "./openapi.yaml", 
             outputDir: "docs/api/positions", 
             sidebarOptions: {
               groupPathsBy: "tag", 

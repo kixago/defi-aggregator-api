@@ -508,3 +508,111 @@ button:focus,
     border: 1px solid #ddd;
   }
 }
+
+/* --- HOMEPAGE SPECIFIC STYLES --- */
+
+.heroBanner {
+  /* This ensures the hero section is tall */
+  padding: 4rem 0; 
+  /* Example style: use a lighter version of your primary color */
+  background-color: var(--ifm-color-primary-lightest);
+  /* Center the content */
+  text-align: center;
+}
+
+[data-theme='dark'] .heroBanner {
+  /* Adjust for dark mode */
+  background-color: var(--ifm-background-color); 
+}
+
+.heroTitle {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.heroSubtitle {
+  font-size: 1.5rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 2rem;
+}
+/* --- FEATURE CARD STYLES --- */
+
+.feature {
+  /* Adds margin below each feature column, usually not needed if you use Infima spacing */
+  margin-bottom: 2rem; 
+}
+
+.featureCard {
+  /* Your existing definition in your custom.css is pretty good, but check for any overrides */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* --- QUICK START/CTA STYLES --- */
+
+.quickStartSection,
+.useCaseSection,
+.ctaSection {
+  padding: 4rem 0;
+}
+
+.sectionTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.codeBlockContainer {
+  /* Style for the container wrapping the code and copy button */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--ifm-global-shadow-md);
+  margin-bottom: 2rem;
+}
+
+.codeBlockHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.codeBlockLang {
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/* Styles for the code block itself */
+.codeBlock {
+  padding: 1rem !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Styles for the stats cards (which you already defined as .stat-card) */
+.stat-card {
+  text-align: center;
+}
+
+.statNumber {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+  line-height: 1;
+}

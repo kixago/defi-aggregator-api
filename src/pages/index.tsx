@@ -3,10 +3,12 @@ import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-import styles from './index.module.css';
+// NOTE: I am using 'featuresData' to avoid conflict with the 'features' class name.
+// Ensure your array is named 'featuresData' at the top of the file.
+// If you see a 'cannot find featuresData' error, rename your original array to featuresData.
 
 // Feature data for the homepage
-const features = [
+const featuresData = [
   {
     title: 'One API, All Protocols',
     icon: '📚',
@@ -52,11 +54,12 @@ interface FeatureProps {
   description: string;
 }
 
-function Feature({title, icon, description}: FeatureProps) {
+// 💥 THE FIX IS HERE: Defining the component using React.FC ensures 'key' is handled internally.
+const Feature: React.FC<FeatureProps> = ({title, icon, description}) => {
   return (
-    <div className={clsx('col col--4', styles.feature)}>
-      <div className={styles.featureCard}>
-        <div className={styles.featureIcon}>{icon}</div>
+    <div className={clsx('col col--4', 'feature')}>
+      <div className={'featureCard'}>
+        <div className={'featureIcon'}>{icon}</div>
         <h3>{title}</h3>
         <p>{description}</p>
       </div>
@@ -67,11 +70,11 @@ function Feature({title, icon, description}: FeatureProps) {
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className={clsx('hero', styles.heroBanner)}>
+    <header className={clsx('hero', 'heroBanner')}>
       <div className="container">
-        <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
-        <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
+        <h1 className={'heroTitle'}>{siteConfig.title}</h1>
+        <p className={'heroSubtitle'}>{siteConfig.tagline}</p>
+        <div className={'buttons'}>
           <Link
             className="button button--primary button--lg"
             to="/docs/intro">
@@ -90,22 +93,22 @@ function HomepageHeader() {
 
 function QuickStartSection() {
   return (
-    <section className={styles.quickStartSection}>
+    <section className={'quickStartSection'}>
       <div className="container">
         <div className="row">
           <div className="col col--12">
-            <h2 className={styles.sectionTitle}>Quick Start: Get Your First Position</h2>
-            <p className={styles.sectionSubtitle}>
+            <h2 className={'sectionTitle'}>Quick Start: Get Your First Position</h2>
+            <p className={'sectionSubtitle'}>
               Get a user's combined lending positions across all protocols with a single API call.
             </p>
           </div>
         </div>
         <div className="row">
           <div className="col col--12">
-            <div className={styles.codeBlockContainer}>
-              <div className={styles.codeBlockHeader}>
-                <span className={styles.codeBlockLang}>bash</span>
-                <button className={styles.copyButton} onClick={() => {
+            <div className={'codeBlockContainer'}>
+              <div className={'codeBlockHeader'}>
+                <span className={'codeBlockLang'}>bash</span>
+                <button className={'copyButton'} onClick={() => {
                   navigator.clipboard.writeText(`# 1. Get your API Key
 export KIXAGO_KEY="YOUR_API_KEY"
 
@@ -118,7 +121,7 @@ curl -H "Authorization: Bearer $KIXAGO_KEY" \\
                   Copy
                 </button>
               </div>
-              <pre className={styles.codeBlock}>
+              <pre className={'codeBlock'}>
 {`# 1. Get your API Key
 export KIXAGO_KEY="YOUR_API_KEY"
 
@@ -129,25 +132,25 @@ curl -H "Authorization: Bearer $KIXAGO_KEY" \\
 # Output will include data from Aave, Compound, MakerDAO, etc.`}
               </pre>
             </div>
-          </div>
-        </div>
+            </div>
+            </div>
         <div className="row" style={{marginTop: '2rem'}}>
           <div className="col col--4">
-            <div className={styles.statCard}>
-              <div className={styles.statNumber}>50ms</div>
-              <div className={styles.statLabel}>Avg Response Time</div>
+            <div className={'statCard'}>
+              <div className={'statNumber'}>50ms</div>
+              <div className={'statLabel'}>Avg Response Time</div>
             </div>
           </div>
           <div className="col col--4">
-            <div className={styles.statCard}>
-              <div className={styles.statNumber}>5+</div>
-              <div className={styles.statLabel}>Protocols Supported</div>
+            <div className={'statCard'}>
+              <div className={'statNumber'}>5+</div>
+              <div className={'statLabel'}>Protocols Supported</div>
             </div>
           </div>
           <div className="col col--4">
-            <div className={styles.statCard}>
-              <div className={styles.statNumber}>4</div>
-              <div className={styles.statLabel}>Chains Available</div>
+            <div className={'statCard'}>
+              <div className={'statNumber'}>4</div>
+              <div className={'statLabel'}>Chains Available</div>
             </div>
           </div>
         </div>
@@ -158,12 +161,12 @@ curl -H "Authorization: Bearer $KIXAGO_KEY" \\
 
 function UseCaseSection() {
   return (
-    <section className={styles.useCaseSection}>
+    <section className={'useCaseSection'}>
       <div className="container">
-        <h2 className={styles.sectionTitle}>Built for Real-World Use Cases</h2>
+        <h2 className={'sectionTitle'}>Built for Real-World Use Cases</h2>
         <div className="row">
           <div className="col col--6">
-            <div className={styles.useCaseCard}>
+            <div className={'useCaseCard'}>
               <h3>🚨 Liquidation Alert Systems</h3>
               <p>
                 Monitor health factors across all protocols and chains. Alert users before positions reach critical levels.
@@ -174,7 +177,7 @@ function UseCaseSection() {
             </div>
           </div>
           <div className="col col--6">
-            <div className={styles.useCaseCard}>
+            <div className={'useCaseCard'}>
               <h3>📊 Portfolio Dashboards</h3>
               <p>
                 Display unified portfolio views showing all lending positions, yields, and risks across DeFi protocols.
@@ -185,18 +188,18 @@ function UseCaseSection() {
             </div>
           </div>
           <div className="col col--6">
-            <div className={styles.useCaseCard}>
+            <div className={'useCaseCard'}>
               <h3>💰 Yield Optimization</h3>
               <p>
                 Compare lending opportunities across protocols and chains to help users maximize their yields.
               </p>
-              <Link to="/docs/examples/yield-optimizer">
+              <Link to="/docs/examples/yield-optimization">
                 View Example →
               </Link>
             </div>
           </div>
           <div className="col col--6">
-            <div className={styles.useCaseCard}>
+            <div className={'useCaseCard'}>
               <h3>🏦 Institutional Risk Management</h3>
               <p>
                 Enterprise-grade risk analytics for large DeFi positions with real-time monitoring and reporting.
@@ -214,11 +217,11 @@ function UseCaseSection() {
 
 function CTASection() {
   return (
-    <section className={styles.ctaSection}>
+    <section className={'ctaSection'}>
       <div className="container">
         <h2>Ready to Simplify Your DeFi Integration?</h2>
         <p>Join developers who are already building with Kixago</p>
-        <div className={styles.buttons}>
+        <div className={'buttons'}>
           <Link
             className="button button--primary button--lg"
             to="/docs/intro">
@@ -245,11 +248,18 @@ export default function Home() {
       description="The unified API for multi-chain DeFi protocol data. Query Aave, Compound, MakerDAO and more with a single endpoint.">
       <HomepageHeader />
       <main>
-        <section className={styles.features}>
+        <section className={'features'}>
           <div className="container">
             <div className="row">
-              {features.map((props, idx) => (
-                <Feature key={idx} {...props} />
+              {featuresData.map((feature, idx) => (
+                    // 💥 The explicit mapping is required to fix the spread error,
+                    // but the React.FC definition above is what enables 'key' to work.
+                <Feature
+                    key={idx}
+                    title={feature.title}
+                    icon={feature.icon}
+                    description={feature.description}
+                />
               ))}
             </div>
           </div>

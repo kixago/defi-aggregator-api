@@ -1,0 +1,823 @@
+openapi: 3.1.0
+info:
+  title: Kixago DeFi Aggregator API
+  version: 1.0.0
+  description: |
+    # Welcome to Kixago
+    
+    Kixago is a **unified DeFi data aggregator** that simplifies cross-protocol, multi-chain lending position queries. 
+    
+    Instead of integrating with Aave, Compound, and MakerDAO separately across Ethereum, Polygon, Arbitrum, and Base, 
+    you make **one API call** and get normalized data back.
+    
+    ## Why Kixago?
+    
+    - **One API, All Protocols**: Query Aave V2/V3, Compound V2/V3, and MakerDAO with a single endpoint
+    - **Multi-Chain by Default**: Ethereum, Polygon, Arbitrum, Base support out of the box
+    - **Normalized Responses**: All protocols return the same data structure
+    - **Real-Time Data**: Direct blockchain queries with intelligent caching
+    - **Developer-First**: Clear errors, detailed examples, and actual working code
+    
+    ## Quick Start
+    
+    ```bash
+    # Get your API key at [https://kixago.com/dashboard](https://kixago.com/dashboard)
+    curl -H "Authorization: Bearer YOUR_API_KEY" \
+      "[https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress](https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress)"
+    ```
+    
+    That's it. Seriously.
+    
+  contact:
+    name: Kixago API Support
+    email: support@kixago.com
+    url: https://docs.kixago.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.kixago.com/api/v1
+    description: Production Server
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+tags:
+  - name: Lending
+    description: Query lending positions across all DeFi protocols
+  - name: Risk
+    description: Portfolio risk analysis and liquidation monitoring
+  - name: Health
+    description: API health and status endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: |
+        Simple health check endpoint to verify the API is running.
+        
+        Use this for monitoring, uptime checks, or integration testing.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy and operational
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-10-15T14:30:00Z"
+              example:
+                status: "ok"
+                timestamp: "2025-10-15T14:30:00Z"
+
+  /lending/positions:
+    get:
+      tags:
+        - Lending
+      summary: Get all lending positions for an address
+      description: |
+        Retrieves all active lending positions for a wallet address across **all supported protocols and chains**.
+        
+        ## What You Get
+        
+        - Collateral deposited (by token, with USD values)
+        - Assets borrowed (by token, with USD values)
+        - Health factor and liquidation risk
+        - APY for each position
+        - Time estimates until liquidation (if at risk)
+        
+        ## How It Works
+        
+        1. API queries Aave V2/V3, Compound V2/V3, and MakerDAO
+        2. Checks Ethereum, Polygon, Arbitrum, and Base simultaneously
+        3. Returns only positions with active collateral or debt
+        4. Results are cached for 60 seconds for performance
+        
+        ## Protocol Coverage
+        
+        - **Aave V2**: Ethereum, Polygon
+        - **Aave V3**: Ethereum, Polygon, Arbitrum, Base
+        - **Compound V2**: Ethereum
+        - **Compound V3**: Ethereum, Arbitrum, Base, Polygon
+        - **MakerDAO**: Ethereum only
+        
+        ## Response Time
+        
+        - **With cache**: ~50ms
+        - **Without cache (first query)**: 2-5 seconds
+        - **Timeout**: 30 seconds maximum
+        
+      operationId: getLendingPositions
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: |
+            The wallet address to query. Must be a valid Ethereum address (0x... format).
+            
+            **Example**: `0xf0bb20865277abd641a307ece5ee04e79073416c`
+          schema:
+            type: string
+            pattern: '^0x[a-fA-F0-9]{40}$'
+          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+        
+        - name: chains
+          in: query
+          required: false
+          description: |
+            Comma-separated list of chains to query. If not provided, queries **all chains**.
+            
+            **Supported chains**: `ethereum`, `polygon`, `arbitrum`, `base`
+            
+            **Examples**:
+            - `?chains=ethereum` - Ethereum only
+            - `?chains=ethereum,polygon` - Ethereum and Polygon
+            - (omit parameter) - All chains
+          schema:
+            type: string
+          example: "ethereum,polygon"
+      
+      responses:
+        '200':
+          description: Successfully retrieved lending positions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LendingPositionsResponse'
+              examples:
+                singlePosition:
+                  summary: User with one Aave position
+                  value:
+                    success: true
+                    data:
+                      positions:
+                        - protocol: "aave"
+                          protocol_version: "v3"
+                          chain: "base"
+                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+                          collateral_details:
+                            - token: "WETH"
+                              amount: 1.5
+                              usd_value: 4500.00
+                              apy: 2.3
+                              token_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+                          borrowed_details:
+                            - token: "USDC"
+                              amount: 2000.00
+                              usd_value: 2000.00
+                              apy: 5.8
+                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+                          collateral_usd: 4500.00
+                          borrowed_usd: 2000.00
+                          ltv_current: 0.44
+                          ltv_liquidation_threshold: 0.80
+                          health_factor: 1.8
+                          is_at_risk: false
+                          time_to_liquidation: "No immediate risk"
+                          last_updated: "2025-10-15T14:30:00Z"
+                      count: 1
+                      errors: {}
+                      duration: "2.3s"
+                      cache_info:
+                        successes: 1
+                        errors: 0
+                    timestamp: "2025-10-15T14:30:00Z"
+                
+                multiplePositions:
+                  summary: User with positions across multiple protocols
+                  value:
+                    success: true
+                    data:
+                      positions:
+                        - protocol: "aave"
+                          protocol_version: "v3"
+                          chain: "ethereum"
+                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+                          collateral_details:
+                            - token: "WETH"
+                              amount: 10.0
+                              usd_value: 30000.00
+                              apy: 2.1
+                              token_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+                          borrowed_details:
+                            - token: "USDC"
+                              amount: 15000.00
+                              usd_value: 15000.00
+                              apy: 6.2
+                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+                          collateral_usd: 30000.00
+                          borrowed_usd: 15000.00
+                          ltv_current: 0.50
+                          ltv_liquidation_threshold: 0.825
+                          health_factor: 1.65
+                          is_at_risk: false
+                          time_to_liquidation: "No immediate risk"
+                          last_updated: "2025-10-15T14:30:00Z"
+                        - protocol: "compound"
+                          protocol_version: "v2"
+                          chain: "ethereum"
+                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+                          collateral_details:
+                            - token: "USDC"
+                              amount: 50000.00
+                              usd_value: 50000.00
+                              apy: 4.5
+                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+                          borrowed_details:
+                            - token: "DAI"
+                              amount: 20000.00
+                              usd_value: 20000.00
+                              apy: 5.5
+                              token_address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+                          collateral_usd: 50000.00
+                          borrowed_usd: 20000.00
+                          ltv_current: 0.40
+                          ltv_liquidation_threshold: 0.75
+                          health_factor: 1.875
+                          is_at_risk: false
+                          time_to_liquidation: "No immediate risk"
+                          last_updated: "2025-10-15T14:30:00Z"
+                      count: 2
+                      errors: {}
+                      duration: "3.1s"
+                      cache_info:
+                        successes: 2
+                        errors: 0
+                    timestamp: "2025-10-15T14:30:00Z"
+                
+                noPositions:
+                  summary: User with no active positions
+                  value:
+                    success: true
+                    data:
+                      positions: []
+                      count: 0
+                      errors: {}
+                      duration: "1.8s"
+                      cache_info:
+                        successes: 0
+                        errors: 0
+                    timestamp: "2025-10-15T14:30:00Z"
+
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingAddress:
+                  summary: Missing address parameter
+                  value:
+                    success: false
+                    error: "address parameter required"
+                    timestamp: "2025-10-15T14:30:00Z"
+                invalidAddress:
+                  summary: Invalid address format
+                  value:
+                    success: false
+                    error: "invalid address format"
+                    timestamp: "2025-10-15T14:30:00Z"
+
+  /lending/opportunities:
+    get:
+      tags:
+        - Lending
+      summary: Find best lending opportunities (Coming Soon)
+      description: |
+        **Status**: 🚧 Coming Soon
+        
+        This endpoint will return the best lending APYs across all protocols for a specific token.
+        
+        ## Planned Features
+        
+        - Compare lending APYs across Aave, Compound, and other protocols
+        - Sort by real APY (accounting for reward tokens)
+        - Filter by chain, token, and risk level
+        - Include gas cost estimates
+        
+      operationId: getLendingOpportunities
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: Token symbol to find opportunities for (e.g., USDC, WETH, DAI)
+          schema:
+            type: string
+          example: "USDC"
+        
+        - name: sort_by
+          in: query
+          required: false
+          description: Sort results by field
+          schema:
+            type: string
+            enum: [apy_real, apy_total, tvl, risk_score]
+            default: apy_real
+          example: "apy_real"
+      
+      responses:
+        '200':
+          description: Lending opportunities (placeholder response)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      sort_by:
+                        type: string
+                      opportunities:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LendingOpportunity'
+                      count:
+                        type: integer
+                      message:
+                        type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                success: true
+                data:
+                  token: "USDC"
+                  sort_by: "apy_real"
+                  opportunities: []
+                  count: 0
+                  message: "Opportunity aggregation coming soon"
+                timestamp: "2025-10-15T14:30:00Z"
+        
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /risk/portfolio:
+    get:
+      tags:
+        - Risk
+      summary: Get portfolio-wide risk analysis
+      description: |
+        Analyzes liquidation risk across **all lending positions** for an address.
+        
+        ## What You Get
+        
+        - Total collateral and debt across all protocols
+        - Weighted health factor
+        - Liquidation risk score (0-1, where 1 = immediate risk)
+        - Number of positions at risk
+        - Recommended actions to improve health
+        
+        ## Use Cases
+        
+        - Build liquidation alert systems
+        - Portfolio health dashboards
+        - Risk management tools
+        - Automated rebalancing triggers
+        
+        ## Risk Scoring
+        
+        | Health Factor | Risk Score | Interpretation |
+        |--------------|-----------|----------------|
+        | > 2.0 | 0.1 | Low risk |
+        | 1.5 - 2.0 | 0.3 | Medium risk |
+        | 1.0 - 1.5 | 0.7 | High risk |
+        | < 1.0 | 1.0 | Immediate liquidation risk |
+        
+      operationId: getPortfolioRisk
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: Wallet address to analyze
+          schema:
+            type: string
+            pattern: '^0x[a-fA-F0-9]{40}$'
+          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+      
+      responses:
+        '200':
+          description: Portfolio risk analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioRiskResponse'
+              examples:
+                healthyPortfolio:
+                  summary: Healthy portfolio with low risk
+                  value:
+                    success: true
+                    data:
+                      total_collateral_usd: 100000.00
+                      total_borrowed_usd: 40000.00
+                      weighted_ltv: 0.40
+                      weighted_health_factor: 2.5
+                      liquidation_risk_score: 0.1
+                      positions_at_risk: 0
+                      positions_near_risk: 0
+                      largest_risk: null
+                      recommended_actions: []
+                      last_updated: "2025-10-15T14:30:00Z"
+                    timestamp: "2025-10-15T14:30:00Z"
+                
+                atRiskPortfolio:
+                  summary: Portfolio with high liquidation risk
+                  value:
+                    success: true
+                    data:
+                      total_collateral_usd: 50000.00
+                      total_borrowed_usd: 42000.00
+                      weighted_ltv: 0.84
+                      weighted_health_factor: 1.2
+                      liquidation_risk_score: 0.7
+                      positions_at_risk: 0
+                      positions_near_risk: 2
+                      largest_risk:
+                        protocol: "aave"
+                        protocol_version: "v3"
+                        chain: "ethereum"
+                        health_factor: 1.2
+                        collateral_usd: 30000.00
+                        borrowed_usd: 25000.00
+                      recommended_actions:
+                        - "HIGH RISK: Consider depositing more collateral or paying down borrows"
+                      last_updated: "2025-10-15T14:30:00Z"
+                    timestamp: "2025-10-15T14:30:00Z"
+        
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# START OF THE CONSOLIDATED COMPONENTS BLOCK
+components:
+  securitySchemes:  # <-- MOVED from the top, now a sibling of schemas
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: |
+        Preferred authentication method. Include your API key in the Authorization header.
+        
+        Example: `Authorization: Bearer kixakey_7eBHF9Ndxd_...`
+        
+        Get your API key at https://kixago.com/dashboard
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: api-key
+      description: |
+        Alternative authentication method using query parameter.
+        
+        Example: `?api-key=kixakey_7eBHF9Ndxd_...`
+        
+        Note: Less secure than header method. Prefer BearerAuth in production.
+  
+  schemas:  # <-- EXISTING
+    TokenDetail:
+      type: object
+      description: Details for a single token (collateral or borrowed)
+      required:
+        - token
+        - amount
+        - usd_value
+        - apy
+        - token_address
+      properties:
+        token:
+          type: string
+          description: Token symbol
+          example: "WETH"
+        amount:
+          type: number
+          format: double
+          description: Raw token amount (in token's native decimals)
+          example: 1.5
+        usd_value:
+          type: number
+          format: double
+          description: Current USD value of this position
+          example: 4500.00
+        apy:
+          type: number
+          format: double
+          description: Annual Percentage Yield (for collateral) or Rate (for borrows)
+          example: 2.3
+        token_address:
+          type: string
+          description: Contract address of the token
+          example: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+
+    LendingPosition:
+      type: object
+      description: A normalized lending position across any protocol
+      required:
+        - protocol
+        - protocol_version
+        - chain
+        - user_address
+        - collateral_details
+        - borrowed_details
+        - collateral_usd
+        - borrowed_usd
+        - ltv_current
+        - ltv_liquidation_threshold
+        - health_factor
+        - is_at_risk
+        - time_to_liquidation
+        - last_updated
+      properties:
+        protocol:
+          type: string
+          description: Protocol name
+          enum: [aave, compound, makerdao]
+          example: "aave"
+        protocol_version:
+          type: string
+          description: Protocol version
+          example: "v3"
+        chain:
+          type: string
+          description: Blockchain network
+          enum: [ethereum, polygon, arbitrum, base]
+          example: "base"
+        user_address:
+          type: string
+          description: User's wallet address
+          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
+        collateral_details:
+          type: array
+          description: List of collateral assets
+          items:
+            $ref: '#/components/schemas/TokenDetail'
+        borrowed_details:
+          type: array
+          description: List of borrowed assets
+          items:
+            $ref: '#/components/schemas/TokenDetail'
+        collateral_usd:
+          type: number
+          format: double
+          description: Total USD value of all collateral
+          example: 4500.00
+        borrowed_usd:
+          type: number
+          format: double
+          description: Total USD value of all borrows
+          example: 2000.00
+        ltv_current:
+          type: number
+          format: double
+          description: Current Loan-to-Value ratio
+          example: 0.44
+        ltv_liquidation_threshold:
+          type: number
+          format: double
+          description: LTV at which liquidation occurs
+          example: 0.80
+        health_factor:
+          type: number
+          format: double
+          description: |
+            Health factor representing liquidation risk.
+            - > 1.0 = Safe
+            - < 1.0 = At risk of liquidation
+          example: 1.8
+        is_at_risk:
+          type: boolean
+          description: True if position is at immediate liquidation risk
+          example: false
+        time_to_liquidation:
+          type: string
+          description: Estimated time until liquidation (if at risk)
+          example: "No immediate risk"
+        last_updated:
+          type: string
+          format: date-time
+          description: Timestamp of last update
+          example: "2025-10-15T14:30:00Z"
+
+    LendingOpportunity:
+      type: object
+      description: A yield opportunity for a specific token
+      properties:
+        protocol:
+          type: string
+          example: "aave"
+        chain:
+          type: string
+          example: "ethereum"
+        token:
+          type: string
+          example: "USDC"
+        apy_base:
+          type: number
+          format: double
+          description: Base lending APY
+          example: 5.2
+        apy_rewards:
+          type: number
+          format: double
+          description: Additional APY from reward tokens
+          example: 1.8
+        apy_total:
+          type: number
+          format: double
+          description: Total APY (base + rewards)
+          example: 7.0
+        apy_real:
+          type: number
+          format: double
+          description: Real APY accounting for gas and slippage
+          example: 6.85
+        tvl:
+          type: number
+          format: double
+          description: Total Value Locked in this market
+          example: 1000000000
+        risk_score:
+          type: number
+          format: double
+          description: Risk score (0-1, lower is safer)
+          example: 0.2
+        estimated_yield_on_50k:
+          type: number
+          format: double
+          description: Estimated annual yield on $50k deposit
+          example: 3425
+
+    PortfolioRisk:
+      type: object
+      description: Aggregated risk analysis across all positions
+      required:
+        - total_collateral_usd
+        - total_borrowed_usd
+        - weighted_ltv
+        - weighted_health_factor
+        - liquidation_risk_score
+        - positions_at_risk
+        - positions_near_risk
+        - last_updated
+      properties:
+        total_collateral_usd:
+          type: number
+          format: double
+          description: Sum of all collateral across all positions
+          example: 100000.00
+        total_borrowed_usd:
+          type: number
+          format: double
+          description: Sum of all debt across all positions
+          example: 40000.00
+        weighted_ltv:
+          type: number
+          format: double
+          description: Portfolio-wide LTV
+          example: 0.40
+        weighted_health_factor:
+          type: number
+          format: double
+          description: Average health factor across all positions
+          example: 2.5
+        liquidation_risk_score:
+          type: number
+          format: double
+          description: Overall risk score (0-1)
+          example: 0.1
+        positions_at_risk:
+          type: integer
+          description: Number of positions with health factor < 1.0
+          example: 0
+        positions_near_risk:
+          type: integer
+          description: Number of positions with health factor < 1.5
+          example: 0
+        largest_risk:
+          allOf:
+            - $ref: '#/components/schemas/LendingPosition'
+          nullable: true
+          description: Position with lowest health factor
+        recommended_actions:
+          type: array
+          items:
+            type: string
+          description: Suggested actions to improve portfolio health
+          example: []
+        last_updated:
+          type: string
+          format: date-time
+          example: "2025-10-15T14:30:00Z"
+
+    LendingPositionsResponse:
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          description: Whether the request succeeded
+          example: true
+        data:
+          type: object
+          required:
+            - positions
+            - count
+            - errors
+            - duration
+            - cache_info
+          properties:
+            positions:
+              type: array
+              items:
+                $ref: '#/components/schemas/LendingPosition'
+            count:
+              type: integer
+              description: Number of positions found
+              example: 2
+            errors:
+              type: object
+              additionalProperties:
+                type: string
+              description: Map of protocol/chain to error messages (if any)
+              example: {}
+            duration:
+              type: string
+              description: Time taken to complete request
+              example: "2.3s"
+            cache_info:
+              type: object
+              properties:
+                successes:
+                  type: integer
+                  example: 2
+                errors:
+                  type: integer
+                  example: 0
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-15T14:30:00Z"
+
+    PortfolioRiskResponse:
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/PortfolioRisk'
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-15T14:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Human-readable error message
+          example: "address parameter required"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-15T14:30:00Z"

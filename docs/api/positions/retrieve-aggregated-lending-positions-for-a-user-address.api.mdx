@@ -1,0 +1,72 @@
+---
+id: retrieve-aggregated-lending-positions-for-a-user-address
+title: "Retrieve aggregated lending positions for a user address."
+description: "Queries all configured protocols (Aave, Compound, MakerDAO) across all supported chains (Ethereum, Base, etc.) and returns all active positions in a single, normalized structure."
+sidebar_label: "Retrieve aggregated lending positions for a user address."
+hide_title: true
+hide_table_of_contents: true
+api: eJzVVttu4zYQ/RWCKJAE8EW5bNL1mzfZbRdN0TTJoijSNKClkcU1RSok5cQ18u+dISVfYmc32LYPfbJkas6cuZ3hnHsxdnxww89BZ1KP+W2HZ+BSKysvjeYD/msNVoJjQimWGp3LcW0hY5U13qRGObY7FFPosFNTVqbWWYf9LCZgz4a/7DGRWuOiqauryliPlmkhpEaz974AC3XZYe+EQwDwaQ9NdMYs+NrqaCdSL6fAKuMkEXJMaiaYQ6oKbbSxpVDyL4R13tYp2kHvD807vBJWlODBUnRzLimUewxlhmcaT/BVZJkF5/APlxZQCj6Ycz+r6AjBKBkE4xGDjP9MHm9ENx92PyTdt7fzo+TpO/7U4Rbua4kJ4QP0D8+Td10Aqx3YHcceMBrwrHHKvGGBDtuF3rjXYcljnoxGB8n3x28OTk7EKDs+2heHyQmk8AYgOYKTt8nJ4dH+cbrXQ7/bI0oFBrItnpExCgTlJYNc1MpHumv8c6HcRgBXSBmp7oTDHXoczSpB/DGy4C5ULDc2xSem4YEZ3Q0lZjlWtECyt+TFVVg8cMTpIEno55mjOk0xL3mtqPzYcVOhmMkRDZixrDQWmIo9umyGHgaEPelBe0IUVaVkKuio/9kR7HwzFWb0GVJPpbWmAutlJOWi/y05wyRlwr8CIsX29yufSSQ2Bss3msJ4jE3X5Qgshbjs7ZwGiMrLF/+t4AlrBRVbeijd1+m0E7qtrTe79Aw+yMVQt00pcLL3Ip/m5G6KEyVjar8MetFiNRYt5vQwIoYe+TrMO2XSSewnDf7B2EkLNGpUI6pIBKVZu2vn+lVx3wd5y9q5jNSMUgLHXqi7DLyQ6h9UwZsJvCLMa/qMuVk5Wmb/t/fXP3bYp6uz0xicKJ81WGwhxMpJBvGE58oIvwF+KR5Y4MEiRJOq7A5nrIZvAEROLNhS+/pCOuYqSGUu01UPopp9A/ZQ6xrH4wJQUTRuJ2C/S1BZ/xIrQjoT/YVwgpfw9Pqan6JcWFwqCyEOEcACkBClV9DW5Cw0QBCBNZxz6TzZLnuFoSyCd+sYzVq9aMYZz+JpCc6LstrGd5EfVB3o0qdriMPx2MIYj7LLRlSJHDwimoI1JWsWUqNdjTodPEUKR9tE+KPGqsrFMLBIJeivdC5Ib7tWY5j4WBjcHXwMPm7LAl/6jVD3lyqGOwnstN3GtUVV4oX3lRv0+6KSvYl8FGPTS01Jr/3p/jY9yXDBk5JcBaiwBZdICIRSIVRhnB8cJknyEtA5fYV6NwVlqhJ7bIGHi0rq3ISiNNn+KfCK6thmHtMxvPiIuAst5Pu9pJdstjKrNQ4F4J2oxJ0ru62Ktu9R1xAsNHZY5pTk4G3Lsot7wZciCEqz8y/jtsTtu2iMTduAL8JVZKl0z+jOl6v0/3rpa0bJw6PvV4r2CwmdDSsw9uYNb3LDV3csFp7aho7nc9orn6x6eqK/4wWLejaTTozUSxel1eTtXjZ3qj32H93/Xoh0ArO1a20j7zxMyuv5/wt3vi8SbG+pS3q39GIl8cNc3+KXBYgMR5ISH42GKGqVX7HauOwRykKPfnh/jQL1N6V7bAI=
+sidebar_class_name: "get api-method"
+info_path: docs/api/positions/kixago-defi-aggregator-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Retrieve aggregated lending positions for a user address."}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/lending/positions"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Queries all configured protocols (Aave, Compound, MakerDAO) across all supported chains (Ethereum, Base, etc.) and returns all active positions in a single, normalized structure.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"in":"query","name":"address","schema":{"type":"string","pattern":"^0x[a-fA-F0-9]{40}$"},"required":true,"description":"The user's wallet address to query (e.g., 0xf0bb20865277abd641a307ece5ee04e79073416c)."},{"in":"query","name":"cache","schema":{"type":"boolean","default":true},"required":false,"description":"Set to 'false' to bypass the cache and force a new on-chain fetch."}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful retrieval of one or more lending positions.","content":{"application/json":{"schema":{"type":"object","properties":{"success":{"type":"boolean"},"data":{"type":"object","properties":{"count":{"type":"integer","description":"Total number of positions found."},"positions":{"type":"array","items":{"type":"object","properties":{"protocol":{"type":"string","description":"The DeFi protocol (e.g., aave)."},"protocol_version":{"type":"string","description":"Protocol version (e.g., v3)."},"chain":{"type":"string","description":"Blockchain network (e.g., base, ethereum)."},"user_address":{"type":"string","description":"The queried address."},"collateral_details":{"type":"array","items":{"type":"object","properties":{"token":{"type":"string","description":"Token symbol (e.g., WETH, USDC)."},"amount":{"type":"number","format":"float","description":"Raw token amount."},"usd_value":{"type":"number","format":"float","description":"USD value of this specific amount."},"apy":{"type":"number","format":"float","description":"Annual Percentage Yield/Rate for this token."},"token_address":{"type":"string","description":"Contract address of the token."}},"title":"TokenDetail"},"description":"List of collateral assets."}},"title":"LendingPosition"}}}},"timestamp":{"type":"string","format":"date-time"}},"title":"AggregatedResponse"},"example":{"success":true,"data":{"count":2}}}}},"400":{"description":"Invalid address format or missing parameter."}}}
+>
+  
+</StatusCodes>
+
+
+      

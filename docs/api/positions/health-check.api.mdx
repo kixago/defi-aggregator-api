@@ -1,0 +1,66 @@
+---
+id: health-check
+title: "Health check"
+description: "Simple health check endpoint to verify the API is running."
+sidebar_label: "Health check"
+hide_title: true
+hide_table_of_contents: true
+api: eJzNVttuGzcQ/ZXB5qGNoZudBkUFBKniS2w4dzspUsuwqV1KYsQltyTXsSL433uGXN0Sxy996ZO05PDMzJnrIgti4rP+RXYshQ7T7LKVFdLnTlVBWZP1szNVVlrSNF5TPpX5jKQpKqtMoGDpRjo1nlOYShq8OyHlydXGKDPpDM3QfPQSVzgcW0elNSpYh7sW1cAvZcLzLcIt8OTECVZLQfqQILJWZiuZjk8K2JMM2ed3uHPSV9Z4CRcW2V6vxz/b9jdGpWdzEqagFaDQgMgtFJvAL0VVaZXHq+4Xz88XmYeJpeB/YV5JANrRF5kHPKwcAwWVlPsgQu035HxgTyEnbwVTyE9n2V0rY8chXVb3CYOnUsCYrBBBtll0C2Gvt/e0vdtr7z493/2t/6TX7/X+zu7u7jZk1qawvi11P33OAKUMU8sMT2T0TiAb+lk3EYcDLx1izbmyyGqnORQhVL7f7YpKdWbqVkxsJ7clf3ZvdrPvE+mds0Wdx/CeRShwsYkEIG1zoafWB5jW6/0M6BVL0YG8kdpWJUK3wrtkK/PaqTCPZr6Qwkk3qNmTi0tWN6jUqZyvTjYenHGcUyg3n60ixCYyC1EM36MohJP052gZN843qLjHfTmWzsmCBIBhdZNolHjv0InJdV1ImtvaxVKayTmKIlUWnqBwvqUXCEkhXayvwxT1Pl1vifQp+UAcFuBc/S5fHB/98aa4La46nc41P30pw7YuEWgZ0Y1oFsJPR1a4ArWILNkkcMWNiIdwWbGn/9TS8YcRZXPZnt1DyEAH6QzMvZH3U0K1R01QhKNKOMCFH9x+3sA/e8DTNzZA9JX0nmK0uSWJJY0r/lOAaB18Jr9aJS33Ii4TZcY2uq5CrMjTSBXS8UjRYDJxciLQ45hUeMwFk7zd7fQ6vR84eER/SQ2WJXfShMQGN5hoW4J2dmqjxgp5E1WgLQgSKz07O+xLIM9dmsU85c5634bhweZWt6isdVDtfCrgjkbnZk4r61VkmsnFow6x2hPjAzghO143Ywh/VeBiIG5ki/ZtWdnaFK3YR1+DcHcweAtWOTxBaiRRVE+HiKeTddmid1bPJ9a0aOBGKjg+4rcvhAfe0CADqQQO/LQmjRBUt4ZfLIVWRIYrS6tvYCA6PxL5LCbBI7CHjp7Ies4nbaC8TSjQpzVimljwOzt9eh8TiR2hT3vdT0/W7iy/t5yKbgviHMT8W468pOR15HQ/cjqaIzJjgRNW8qDj7DT5uqqsC2TrwExzeY/sbcJ9s/b1w3KyMSr7sowoBqwMtUuNwaMoEi2YIEhUJHdC+oC23T7nEXuAW8Y4UA5zi0ZosrOUDU3wk6ccca3VhPtpLvIp3E5ITaOVrn2knI9O7msUCaGbWYfZXcgglIbJzQjyiUgBa9Cnv1o34yzKbSGbqL2vFZaIsyBc4JPr6+sRmgyu6L6edPFQU7r89aHbx0ODctfUPqZhdn+D/Pz244craLs6Pfw8zGg4HBqC8MWDs63b1FF3WUf+uSgK7CL+We/2M+wfpK+1df8J5vEwiywxWeeo9l88qdDhqads7fU8rUm8x4Bz7k1N523aCHN5lpKOd4kSweKNI538ubYKl9tzvbC537Ca2z/WI4mk3FDy+uT8h4fIFuNhfy471k26zSPfZVnuofA3lMJsoBxvrJffd8nFekX7H2yjzcgL8jZ0K40yYlqi+4tmZ7podlTepXmZ4ZPFAikuPzp9d8fHaURiA8GIEE6JEY8S3lCyNJTi9sJDE2Myz2XFgbsRuk7z9LsllbeY1fL28pAp/hczlB0c
+sidebar_class_name: "get api-method"
+info_path: docs/api/positions/kixago-defi-aggregator-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Health check"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/health"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Simple health check endpoint to verify the API is running.
+
+Use this for monitoring, uptime checks, or integration testing.
+
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"API is healthy and operational","content":{"application/json":{"schema":{"type":"object","properties":{"status":{"type":"string","example":"ok"},"timestamp":{"type":"string","format":"date-time","example":"2025-10-15T14:30:00Z"}}},"example":{"status":"ok","timestamp":"2025-10-15T14:30:00Z"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

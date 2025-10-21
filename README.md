@@ -211,7 +211,7 @@ The final score maps to a 300-850 range (like FICO):
 - ✅ Compound V2 (Ethereum)
 - ✅ Compound V3 (Ethereum, Base, Arbitrum, Polygon)
 - ✅ MakerDAO (Ethereum)
-- Coming: Morpho, Spark, Euler
+- In Progress: Morpho, Spark, Euler
 
 ### Chains
 - ✅ Ethereum (own node infrastructure)
@@ -264,13 +264,32 @@ Returns just the position data without scoring (faster if you just need balances
 ## SDKs and Code Examples
 
 ### Official SDKs
-We're building official client libraries. They're not ready yet but will be soon:
 
-- TypeScript/JavaScript SDK (Q2 2025)
-- Python SDK (Q2 2025)  
-- Go SDK (Q3 2025)
+- ✅ **TypeScript/JavaScript SDK** - [kixago-ts](https://github.com/kixago/kixago-ts)
+- ✅ **Python SDK** - [kixago-python](https://github.com/kixago/kixago-python)
+- Go SDK - Coming soon
 
-For now, it's just HTTP requests. The API is straightforward REST, so any HTTP client works.
+**TypeScript Example:**
+```typescript
+import { Kixago } from '@kixago/sdk';
+
+const kixago = new Kixago('YOUR_API_KEY');
+const profile = await kixago.getRiskProfile('vitalik.eth');
+
+console.log(`Credit Score: ${profile.defi_score}`);
+console.log(`Risk Level: ${profile.risk_level}`);
+```
+
+**Python Example:**
+```python
+from kixago import Kixago
+
+kixago = Kixago('YOUR_API_KEY')
+profile = kixago.get_risk_profile('vitalik.eth')
+
+print(f"Credit Score: {profile.defi_score}")
+print(f"Risk Level: {profile.risk_level}")
+```
 
 ### Community Examples
 
@@ -331,24 +350,29 @@ Free tier is actually free. No credit card required, no surprise charges. When y
 - ✅ Credit scoring (300-850 range)
 - ✅ REST API with OpenAPI spec
 - ✅ Real-time data (1-2s response)
+- ✅ TypeScript SDK
+- ✅ Python SDK
 - ✅ Complete documentation
 
-### Next 3-6 Months (Q2-Q3 2025)
-- TypeScript and Python SDKs
-- Historical score tracking
+### Next 1-3 Months
+- Additional protocols (Morpho, Spark, Euler, Radiant)
+- Historical score tracking and trend analysis
 - Webhook alerts for health factor changes
 - Yield optimization suggestions
-- Additional protocols (Morpho, Spark, Euler)
 - Additional chains (Optimism, Avalanche)
+- GraphQL API endpoint
+- Go SDK
 
-### Later (Q4 2025+)
-- PDF credit reports
+### Enterprise Features (Actively Building)
+- PDF credit reports with custom branding
 - Multi-wallet portfolio tracking
-- Custom scoring model weights
+- Custom scoring model weights for institutional risk appetites
 - On-premise deployment option
-- SSO and role-based access
+- SSO and role-based access control
+- White-label API solutions
+- Dedicated support and SLA guarantees
 
-We ship regularly. Follow [@kixago](https://twitter.com/kixago) for updates.
+We ship continuously. Follow [@kixago](https://twitter.com/kixago) for real-time updates.
 
 ---
 
@@ -356,7 +380,7 @@ We ship regularly. Follow [@kixago](https://twitter.com/kixago) for updates.
 
 ### How We Get The Data
 
-We run our own Ethereum and Base nodes. For other chains, we use Alchemy. All queries go directly to the blockchain in real-time - we're not using indexed data that's hours or days old.
+We run our own nodes. All queries go directly to the blockchain in real-time - we're not using indexed data that's hours or days old.
 
 When you request a risk profile:
 1. We query all protocols on all chains in parallel
@@ -371,7 +395,7 @@ Total time: 1-2 seconds on average.
 ### Rate Limits
 
 Free tier: 10,000 requests/month, max 10 requests/second  
-Paid tiers: See pricing page
+Paid tiers: [See pricing page](https://kixago.com/pricing)
 
 If you hit the rate limit, you get a `429 Too Many Requests` with a `Retry-After` header.
 
@@ -397,7 +421,7 @@ Common errors are documented in the API reference.
 - **API Status:** [status.kixago.com](https://status.kixago.com)  
 - **Email:** hello@kixago.com
 - **Twitter:** [@kixago](https://twitter.com/kixago)
-- **GitHub Issues:** [github.com/kixago/docs/issues](https://github.com/kixago/docs/issues)
+- **GitHub Issues:** [github.com/kixago/docs/issues](https://github.com/kixago/defi-aggregator-api/issues)
 
 For API issues or bugs, GitHub issues are fastest. For business inquiries, use email.
 
@@ -413,12 +437,15 @@ This documentation is MIT licensed. The Kixago API itself is proprietary - see [
 
 Built with [Docusaurus](https://docusaurus.io).
 
-Thanks to the teams behind Aave, Compound, and MakerDAO for building great protocols and maintaining solid documentation.
+Thanks to the teams building the protocols that make DeFi possible:
+- [Aave](https://aave.com) - Leading DeFi lending protocol
+- [Compound](https://compound.finance) - Pioneer of algorithmic money markets
+- [MakerDAO](https://makerdao.com) - Decentralized stablecoin infrastructure
+
+We're protocol-agnostic infrastructure, but we appreciate the work these teams have done to create open, transparent, and auditable financial systems.
 
 ---
 
 **Built by developers who got tired of rebuilding the same DeFi integrations over and over.**
 
-[Get Started](https://docs.kixago.com/docs/intro) • [Get API Key](https://kixago.com/dashboard) • [View API Reference](https://docs.kixago.com/docs/api)
-
----
+[Get Started](https://docs.kixago.com/docs/intro) • [Get API Key](https://kixago.com) • [View API Reference](https://docs.kixago.com/docs/api)

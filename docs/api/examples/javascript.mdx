@@ -1,0 +1,1153 @@
+---
+sidebar_position: 1
+title: "JavaScript Examples"
+description: "Complete JavaScript/TypeScript code examples"
+---
+
+# JavaScript/TypeScript Examples
+
+Complete, production-ready code examples for integrating Kixago API in JavaScript and TypeScript applications.
+
+---
+
+## Quick Start
+
+### Installation
+
+No SDK installation required - use native `fetch` (Node.js 18+ or browser):
+
+```bash
+# Node.js < 18: Install fetch polyfill
+npm install node-fetch
+
+# TypeScript users: Install types
+npm install -D @types/node
+```
+
+### Environment Setup
+
+Store your API key in environment variables:
+
+```bash
+# .env
+KIXAGO_API_KEY=kixakey_your_key_here
+```
+
+```javascript
+// Load environment variables (Node.js)
+require('dotenv').config();
+
+const KIXAGO_API_KEY = process.env.KIXAGO_API_KEY;
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request (Node.js)
+
+```javascript
+// basic-example.js
+async function getRiskProfile(walletAddress) {
+  const response = await fetch(
+    `https://api.kixago.com/v1/risk-profile/${walletAddress}`,
+    {
+      headers: {
+        'X-API-Key': process.env.KIXAGO_API_KEY
+      }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+// Usage
+getRiskProfile('0xf0bb20865277aBd641a307eCe5Ee04E79073416C')
+  .then(profile => {
+    console.log(`DeFi Score: ${profile.defi_score.defi_score}`);
+    console.log(`Risk Level: ${profile.defi_score.risk_level}`);
+    console.log(`Health Factor: ${profile.global_health_factor.toFixed(2)}`);
+  })
+  .catch(err => console.error('Error:', err.message));
+```
+
+---
+
+### Example 2: TypeScript with Type Safety
+
+```typescript
+// types.ts
+export interface TokenDetail {
+  token: string;
+  amount: number;
+  usd_value: number;
+  token_address: string;
+}
+
+export interface LendingPosition {
+  protocol: string;
+  protocol_version: string;
+  chain: string;
+  user_address: string;
+  collateral_usd: number;
+  borrowed_usd: number;
+  health_factor: number;
+  ltv_current: number;
+  is_at_risk: boolean;
+  collateral_details: TokenDetail[] | null;
+  borrowed_details: TokenDetail[] | null;
+  last_updated: string;
+}
+
+export interface ComponentScore {
+  component_score: number;
+  weight: number;
+  weighted_contribution: number;
+  reasoning: string;
+}
+
+export interface ScoreBreakdown {
+  health_factor_score: ComponentScore;
+  leverage_score: ComponentScore;
+  diversification_score: ComponentScore;
+  volatility_score: ComponentScore;
+  protocol_risk_score: ComponentScore;
+  total_internal_score: number;
+}
+
+export interface RiskFactor {
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  factor: string;
+  description: string;
+  impact_on_score: number;
+}
+
+export interface Recommendations {
+  immediate: string[];
+  short_term: string[];
+  long_term: string[];
+}
+
+export interface LiquidationScenario {
+  event: string;
+  new_health_factor: number;
+  status: 'Safe' | 'Near liquidation' | 'LIQUIDATED';
+  time_estimate?: string;
+  estimated_loss?: string;
+}
+
+export interface LiquidationSimulation {
+  current_health_factor: number;
+  liquidation_threshold: number;
+  buffer_percentage: number;
+  scenarios: LiquidationScenario[];
+}
+
+export interface DeFiScore {
+  defi_score: number;
+  risk_level: string;
+  risk_category: 'VERY_LOW_RISK' | 'LOW_RISK' | 'MODERATE_RISK' | 'HIGH_RISK' | 'URGENT_ACTION_REQUIRED';
+  color: 'green' | 'blue' | 'yellow' | 'orange' | 'red';
+  score_breakdown: ScoreBreakdown;
+  risk_factors: RiskFactor[];
+  recommendations: Recommendations;
+  liquidation_simulation: LiquidationSimulation;
+  calculated_at: string;
+}
+
+export interface RiskProfileResponse {
+  wallet_address: string;
+  total_collateral_usd: number;
+  total_borrowed_usd: number;
+  global_health_factor: number;
+  global_ltv: number;
+  positions_at_risk_count: number;
+  last_updated: string;
+  aggregation_duration: string;
+  lending_positions: LendingPosition[];
+  defi_score: DeFiScore | null;
+  aggregation_errors?: Record<string, string>;
+}
+
+// api-client.ts
+import type { RiskProfileResponse } from './types';
+
+export class KixagoClient {
+  private apiKey: string;
+  private baseUrl: string;
+  
+  constructor(apiKey: string, baseUrl = 'https://api.kixago.com') {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+  }
+  
+  async getRiskProfile(walletAddress: string): Promise<RiskProfileResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/v1/risk-profile/${walletAddress}`,
+      {
+        headers: {
+          'X-API-Key': this.apiKey
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    
+    return await response.json();
+  }
+}
+
+// Usage
+const client = new KixagoClient(process.env.KIXAGO_API_KEY!);
+
+const profile = await client.getRiskProfile('0xf0bb20865277aBd641a307eCe5Ee04E79073416C');
+
+// TypeScript knows all the types!
+console.log(profile.defi_score?.defi_score); // number | undefined
+console.log(profile.lending_positions[0].protocol); // string
+```
+
+---
+
+## Error Handling
+
+### Example 3: Comprehensive Error Handling
+
+```typescript
+// error-handling.ts
+class KixagoAPIError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public response?: any
+  ) {
+    super(message);
+    this.name = 'KixagoAPIError';
+  }
+}
+
+async function getRiskProfileSafe(walletAddress: string): Promise<RiskProfileResponse> {
+  try {
+    const response = await fetch(
+      `https://api.kixago.com/v1/risk-profile/${walletAddress}`,
+      {
+        headers: {
+          'X-API-Key': process.env.KIXAGO_API_KEY!
+        }
+      }
+    );
+    
+    // Handle HTTP errors
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      switch (response.status) {
+        case 400:
+          throw new KixagoAPIError(
+            `Invalid wallet address: ${errorData.error}`,
+            400,
+            errorData
+          );
+        
+        case 401:
+          throw new KixagoAPIError(
+            'Invalid API key - check your credentials',
+            401,
+            errorData
+          );
+        
+        case 429:
+          throw new KixagoAPIError(
+            `Rate limit exceeded - retry after ${response.headers.get('Retry-After')}s`,
+            429,
+            errorData
+          );
+        
+        case 500:
+          throw new KixagoAPIError(
+            'API server error - try again later',
+            500,
+            errorData
+          );
+        
+        default:
+          throw new KixagoAPIError(
+            errorData.error || `HTTP ${response.status}`,
+            response.status,
+            errorData
+          );
+      }
+    }
+    
+    const data = await response.json();
+    
+    // Check for partial failures
+    if (data.aggregation_errors && Object.keys(data.aggregation_errors).length > 0) {
+      console.warn('⚠️ Some protocols failed:', data.aggregation_errors);
+    }
+    
+    return data;
+    
+  } catch (err) {
+    if (err instanceof KixagoAPIError) {
+      throw err;
+    }
+    
+    // Network errors, etc.
+    throw new KixagoAPIError(
+      `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`
+    );
+  }
+}
+
+// Usage with error handling
+try {
+  const profile = await getRiskProfileSafe('0xInvalidAddress');
+  console.log(profile.defi_score?.defi_score);
+} catch (err) {
+  if (err instanceof KixagoAPIError) {
+    console.error(`API Error (${err.statusCode}):`, err.message);
+    
+    if (err.statusCode === 429) {
+      // Handle rate limiting
+      console.log('Retrying after rate limit...');
+    }
+  } else {
+    console.error('Unexpected error:', err);
+  }
+}
+```
+
+---
+
+## Caching Implementation
+
+### Example 4: Simple In-Memory Cache
+
+```typescript
+// simple-cache.ts
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+class SimpleCache<T> {
+  private cache = new Map<string, CacheEntry<T>>();
+  private ttl: number; // milliseconds
+  
+  constructor(ttlSeconds: number = 30) {
+    this.ttl = ttlSeconds * 1000;
+  }
+  
+  get(key: string): T | null {
+    const entry = this.cache.get(key);
+    
+    if (!entry) {
+      return null;
+    }
+    
+    const age = Date.now() - entry.timestamp;
+    
+    if (age > this.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+  
+  set(key: string, data: T): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+  
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Usage
+const cache = new SimpleCache<RiskProfileResponse>(30); // 30 second TTL
+
+async function getCachedRiskProfile(walletAddress: string): Promise<RiskProfileResponse> {
+  // Check cache first
+  const cached = cache.get(walletAddress);
+  if (cached) {
+    console.log('✅ Cache HIT');
+    return cached;
+  }
+  
+  console.log('❌ Cache MISS - fetching from API');
+  
+  // Fetch from API
+  const fresh = await getRiskProfileSafe(walletAddress);
+  
+  // Cache the result
+  cache.set(walletAddress, fresh);
+  
+  return fresh;
+}
+
+// Usage
+const profile1 = await getCachedRiskProfile('0xf0bb...'); // API call
+const profile2 = await getCachedRiskProfile('0xf0bb...'); // Cache hit (fast!)
+```
+
+---
+
+### Example 5: Redis Cache (Production)
+
+```typescript
+// redis-cache.ts
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD
+});
+
+async function getCachedRiskProfileRedis(
+  walletAddress: string
+): Promise<RiskProfileResponse> {
+  const cacheKey = `kixago:profile:${walletAddress}`;
+  
+  // Try cache first
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    console.log('✅ Redis cache HIT');
+    return JSON.parse(cached);
+  }
+  
+  console.log('❌ Redis cache MISS');
+  
+  // Fetch from API
+  const fresh = await getRiskProfileSafe(walletAddress);
+  
+  // Cache for 30 seconds
+  await redis.setex(cacheKey, 30, JSON.stringify(fresh));
+  
+  return fresh;
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 6: Credit Underwriting System
+
+```typescript
+// underwriting.ts
+interface UnderwritingDecision {
+  decision: 'APPROVED' | 'DECLINED' | 'MANUAL_REVIEW';
+  reason: string;
+  defi_score?: number;
+  risk_category?: string;
+  max_loan_amount?: number;
+  conditions?: string[];
+}
+
+async function underwriteBorrower(
+  walletAddress: string,
+  requestedLoanAmount: number
+): Promise<UnderwritingDecision> {
+  try {
+    const profile = await getCachedRiskProfile(walletAddress);
+    
+    // Check if wallet has DeFi history
+    if (!profile.defi_score) {
+      return {
+        decision: 'DECLINED',
+        reason: 'No DeFi lending history found'
+      };
+    }
+    
+    const { defi_score, risk_category } = profile.defi_score;
+    const { global_health_factor, total_collateral_usd } = profile;
+    
+    // Rule 1: Minimum credit score
+    if (defi_score < 550) {
+      return {
+        decision: 'DECLINED',
+        reason: `DeFi credit score too low: ${defi_score}`,
+        defi_score
+      };
+    }
+    
+    // Rule 2: Health factor requirement
+    if (global_health_factor < 1.5 && global_health_factor > 0) {
+      return {
+        decision: 'DECLINED',
+        reason: `Health factor too low: ${global_health_factor.toFixed(2)} (minimum 1.5)`,
+        defi_score
+      };
+    }
+    
+    // Rule 3: Collateral requirement (must have 2x loan amount in collateral)
+    const minCollateral = requestedLoanAmount * 2;
+    if (total_collateral_usd < minCollateral) {
+      return {
+        decision: 'DECLINED',
+        reason: `Insufficient collateral. Need $${minCollateral.toLocaleString()}, have $${total_collateral_usd.toLocaleString()}`,
+        defi_score
+      };
+    }
+    
+    // Rule 4: Risk category checks
+    if (risk_category === 'URGENT_ACTION_REQUIRED') {
+      return {
+        decision: 'DECLINED',
+        reason: 'Critical risk factors detected - position at imminent liquidation risk',
+        defi_score,
+        risk_category
+      };
+    }
+    
+    if (risk_category === 'HIGH_RISK') {
+      return {
+        decision: 'MANUAL_REVIEW',
+        reason: 'High risk category - requires underwriter review',
+        defi_score,
+        risk_category,
+        conditions: profile.defi_score.recommendations.immediate
+      };
+    }
+    
+    // Calculate max loan amount (50% of collateral)
+    const maxLoanAmount = total_collateral_usd * 0.5;
+    
+    if (requestedLoanAmount > maxLoanAmount) {
+      return {
+        decision: 'MANUAL_REVIEW',
+        reason: `Requested amount exceeds max (50% of collateral)`,
+        defi_score,
+        max_loan_amount: maxLoanAmount
+      };
+    }
+    
+    // APPROVED!
+    return {
+      decision: 'APPROVED',
+      reason: `Strong DeFi profile - Score ${defi_score}, Risk: ${risk_category}`,
+      defi_score,
+      risk_category,
+      max_loan_amount: maxLoanAmount,
+      conditions: []
+    };
+    
+  } catch (err) {
+    console.error('Underwriting error:', err);
+    return {
+      decision: 'MANUAL_REVIEW',
+      reason: 'Error fetching DeFi profile - manual review required'
+    };
+  }
+}
+
+// Usage
+const decision = await underwriteBorrower(
+  '0xf0bb20865277aBd641a307eCe5Ee04E79073416C',
+  500000 // $500K loan request
+);
+
+console.log(`Decision: ${decision.decision}`);
+console.log(`Reason: ${decision.reason}`);
+
+if (decision.decision === 'APPROVED') {
+  console.log(`Max loan amount: $${decision.max_loan_amount?.toLocaleString()}`);
+}
+```
+
+---
+
+### Example 7: Liquidation Monitoring Bot
+
+```typescript
+// liquidation-monitor.ts
+interface LiquidationAlert {
+  wallet: string;
+  collateral_usd: number;
+  health_factor: number;
+  buffer_percentage: number;
+  urgency: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  message: string;
+  estimated_loss?: string;
+}
+
+async function monitorLiquidationRisk(
+  walletAddresses: string[]
+): Promise<LiquidationAlert[]> {
+  const alerts: LiquidationAlert[] = [];
+  
+  for (const address of walletAddresses) {
+    try {
+      const profile = await getCachedRiskProfile(address);
+      
+      // Skip if no positions
+      if (!profile.defi_score || profile.total_collateral_usd === 0) {
+        continue;
+      }
+      
+      const { buffer_percentage, current_health_factor, scenarios } = 
+        profile.defi_score.liquidation_simulation;
+      
+      // Check for liquidation risk
+      if (buffer_percentage < 5) {
+        // CRITICAL: Liquidation imminent
+        const liquidationScenario = scenarios.find(s => s.status === 'LIQUIDATED');
+        
+        alerts.push({
+          wallet: address,
+          collateral_usd: profile.total_collateral_usd,
+          health_factor: current_health_factor,
+          buffer_percentage,
+          urgency: 'CRITICAL',
+          message: `🚨 CRITICAL: Only ${buffer_percentage.toFixed(1)}% buffer remaining! Liquidation imminent!`,
+          estimated_loss: liquidationScenario?.estimated_loss
+        });
+        
+      } else if (buffer_percentage < 10) {
+        // HIGH: Vulnerable to normal volatility
+        alerts.push({
+          wallet: address,
+          collateral_usd: profile.total_collateral_usd,
+          health_factor: current_health_factor,
+          buffer_percentage,
+          urgency: 'HIGH',
+          message: `⚠️ HIGH RISK: ${buffer_percentage.toFixed(1)}% buffer - vulnerable to normal market volatility`
+        });
+        
+      } else if (buffer_percentage < 20) {
+        // MEDIUM: Monitor closely
+        alerts.push({
+          wallet: address,
+          collateral_usd: profile.total_collateral_usd,
+          health_factor: current_health_factor,
+          buffer_percentage,
+          urgency: 'MEDIUM',
+          message: `⚡ WARNING: ${buffer_percentage.toFixed(1)}% buffer - monitor closely during volatility`
+        });
+      }
+      
+    } catch (err) {
+      console.error(`Error monitoring ${address}:`, err);
+    }
+  }
+  
+  // Sort by urgency (CRITICAL first)
+  return alerts.sort((a, b) => {
+    const urgencyOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
+    return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+  });
+}
+
+// Usage: Monitor whale wallets
+const whaleWallets = [
+  '0xf0bb20865277aBd641a307eCe5Ee04E79073416C',
+  '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  // ... more wallets
+];
+
+const alerts = await monitorLiquidationRisk(whaleWallets);
+
+// Send notifications for critical alerts
+alerts.forEach(alert => {
+  console.log(alert.message);
+  console.log(`  Wallet: ${alert.wallet}`);
+  console.log(`  Collateral at risk: $${alert.collateral_usd.toLocaleString()}`);
+  console.log(`  Health Factor: ${alert.health_factor.toFixed(3)}`);
+  
+  if (alert.urgency === 'CRITICAL') {
+    // Send SMS/email alert
+    sendCriticalAlert(alert);
+  }
+});
+```
+
+---
+
+### Example 8: Portfolio Dashboard
+
+```typescript
+// portfolio-dashboard.ts
+interface PortfolioSummary {
+  wallet: string;
+  score: number;
+  risk_level: string;
+  total_aum: number;
+  net_worth: number;
+  health_factor: number;
+  ltv: number;
+  positions_count: number;
+  chains: string[];
+  protocols: string[];
+  at_risk: boolean;
+  top_recommendations: string[];
+}
+
+async function generatePortfolioSummary(
+  walletAddress: string
+): Promise<PortfolioSummary | null> {
+  const profile = await getCachedRiskProfile(walletAddress);
+  
+  if (!profile.defi_score) {
+    return null;
+  }
+  
+  // Extract unique chains and protocols
+  const chains = [...new Set(profile.lending_positions.map(p => p.chain))];
+  const protocols = [...new Set(profile.lending_positions.map(p => p.protocol))];
+  
+  // Calculate net worth
+  const netWorth = profile.total_collateral_usd - profile.total_borrowed_usd;
+  
+  return {
+    wallet: walletAddress,
+    score: profile.defi_score.defi_score,
+    risk_level: profile.defi_score.risk_level,
+    total_aum: profile.total_collateral_usd,
+    net_worth: netWorth,
+    health_factor: profile.global_health_factor,
+    ltv: profile.global_ltv,
+    positions_count: profile.lending_positions.length,
+    chains,
+    protocols,
+    at_risk: profile.positions_at_risk_count > 0,
+    top_recommendations: profile.defi_score.recommendations.immediate
+  };
+}
+
+// Usage: Display dashboard
+const summary = await generatePortfolioSummary('0xf0bb20865277aBd641a307eCe5Ee04E79073416C');
+
+if (summary) {
+  console.log('=== PORTFOLIO SUMMARY ===');
+  console.log(`DeFi Score: ${summary.score} (${summary.risk_level})`);
+  console.log(`Total AUM: $${summary.total_aum.toLocaleString()}`);
+  console.log(`Net Worth: $${summary.net_worth.toLocaleString()}`);
+  console.log(`Health Factor: ${summary.health_factor.toFixed(2)}`);
+  console.log(`LTV: ${summary.ltv.toFixed(1)}%`);
+  console.log(`Positions: ${summary.positions_count} across ${summary.chains.join(', ')}`);
+  console.log(`Protocols: ${summary.protocols.join(', ')}`);
+  
+  if (summary.at_risk) {
+    console.log('\n⚠️ POSITIONS AT RISK:');
+    summary.top_recommendations.forEach(rec => {
+      console.log(`  - ${rec}`);
+    });
+  }
+}
+```
+
+---
+
+## Advanced Patterns
+
+### Example 9: Retry Logic with Exponential Backoff
+
+```typescript
+// retry-logic.ts
+async function fetchWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isLastAttempt = i === maxRetries - 1;
+      
+      // Don't retry on 4xx errors (except 429)
+      if (err instanceof KixagoAPIError) {
+        if (err.statusCode && err.statusCode >= 400 && err.statusCode < 500 && err.statusCode !== 429) {
+          throw err;
+        }
+      }
+      
+      if (isLastAttempt) {
+        throw err;
+      }
+      
+      // Exponential backoff: 1s, 2s, 4s, 8s...
+      const delay = baseDelay * Math.pow(2, i);
+      console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+
+// Usage
+const profile = await fetchWithRetry(() => 
+  getRiskProfileSafe('0xf0bb20865277aBd641a307eCe5Ee04E79073416C')
+);
+```
+
+---
+
+### Example 10: Batch Processing with Rate Limiting
+
+```typescript
+// batch-processing.ts
+class RateLimiter {
+  private queue: Array<() => Promise<any>> = [];
+  private processing = false;
+  private requestsPerSecond: number;
+  private delayMs: number;
+  
+  constructor(requestsPerSecond: number) {
+    this.requestsPerSecond = requestsPerSecond;
+    this.delayMs = 1000 / requestsPerSecond;
+  }
+  
+  async add<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      
+      if (!this.processing) {
+        this.processQueue();
+      }
+    });
+  }
+  
+  private async processQueue() {
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const fn = this.queue.shift();
+      if (fn) {
+        await fn();
+        await new Promise(resolve => setTimeout(resolve, this.delayMs));
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+
+// Usage: Process 100 wallets at 10 req/sec
+const rateLimiter = new RateLimiter(10); // 10 requests per second
+
+const wallets = [
+  '0xWallet1...',
+  '0xWallet2...',
+  // ... 100 wallets
+];
+
+const results = await Promise.all(
+  wallets.map(wallet => 
+    rateLimiter.add(() => getCachedRiskProfile(wallet))
+  )
+);
+
+console.log(`Processed ${results.length} wallets`);
+```
+
+---
+
+### Example 11: React Hook
+
+```typescript
+// useRiskProfile.ts
+import { useState, useEffect } from 'react';
+import type { RiskProfileResponse } from './types';
+
+export function useRiskProfile(walletAddress: string | null) {
+  const [data, setData] = useState<RiskProfileResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  
+  useEffect(() => {
+    if (!walletAddress) {
+      setData(null);
+      return;
+    }
+    
+    let cancelled = false;
+    
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(
+          `https://api.kixago.com/v1/risk-profile/${walletAddress}`,
+          {
+            headers: {
+              'X-API-Key': process.env.REACT_APP_KIXAGO_API_KEY!
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const json = await response.json();
+        
+        if (!cancelled) {
+          setData(json);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Unknown error'));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    
+    fetchData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      cancelled = true;
+    };
+  }, [walletAddress]);
+  
+  return { data, loading, error };
+}
+
+// Usage in React component
+function PortfolioCard({ address }: { address: string }) {
+  const { data, loading, error } = useRiskProfile(address);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!data) return <div>No data</div>;
+  
+  return (
+    <div className="portfolio-card">
+      <h2>DeFi Score: {data.defi_score?.defi_score ?? 'N/A'}</h2>
+      <p>Risk Level: {data.defi_score?.risk_level ?? 'Unknown'}</p>
+      <p>Health Factor: {data.global_health_factor.toFixed(2)}</p>
+      <p>Total Collateral: ${data.total_collateral_usd.toLocaleString()}</p>
+      
+      {data.positions_at_risk_count > 0 && (
+        <div className="alert">
+          ⚠️ {data.positions_at_risk_count} position(s) at risk
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Testing
+
+### Example 12: Unit Tests (Jest)
+
+```typescript
+// risk-profile.test.ts
+import { describe, it, expect, jest } from '@jest/globals';
+import { KixagoClient } from './api-client';
+
+// Mock fetch
+global.fetch = jest.fn();
+
+describe('KixagoClient', () => {
+  const client = new KixagoClient('test-api-key');
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  it('should fetch risk profile successfully', async () => {
+    const mockResponse = {
+      wallet_address: '0xTest...',
+      total_collateral_usd: 100000,
+      defi_score: {
+        defi_score: 750,
+        risk_level: 'Very Low Risk'
+      }
+    };
+    
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse
+    });
+    
+    const result = await client.getRiskProfile('0xTest...');
+    
+    expect(result.wallet_address).toBe('0xTest...');
+    expect(result.defi_score?.defi_score).toBe(750);
+  });
+  
+  it('should handle 404 errors', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Wallet not found' })
+    });
+    
+    await expect(client.getRiskProfile('0xInvalid...')).rejects.toThrow('Wallet not found');
+  });
+  
+  it('should handle rate limiting', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: 'rate limit exceeded' })
+    });
+    
+    await expect(client.getRiskProfile('0xTest...')).rejects.toThrow('rate limit exceeded');
+  });
+});
+```
+
+---
+
+## Complete Application Example
+
+### Example 13: Express.js API Server
+
+```typescript
+// server.ts
+import express from 'express';
+import { KixagoClient } from './api-client';
+import { SimpleCache } from './simple-cache';
+
+const app = express();
+const client = new KixagoClient(process.env.KIXAGO_API_KEY!);
+const cache = new SimpleCache<any>(30);
+
+app.use(express.json());
+
+// Endpoint: Get risk profile
+app.get('/api/wallet/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    // Check cache
+    const cached = cache.get(address);
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+    
+    // Fetch from Kixago API
+    const profile = await client.getRiskProfile(address);
+    
+    // Cache result
+    cache.set(address, profile);
+    
+    res.json({ ...profile, cached: false });
+    
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch risk profile' });
+  }
+});
+
+// Endpoint: Underwriting decision
+app.post('/api/underwrite', async (req, res) => {
+  try {
+    const { wallet_address, loan_amount } = req.body;
+    
+    const decision = await underwriteBorrower(wallet_address, loan_amount);
+    
+    res.json(decision);
+    
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Underwriting failed' });
+  }
+});
+
+// Endpoint: Monitor liquidation risk
+app.post('/api/monitor', async (req, res) => {
+  try {
+    const { wallets } = req.body;
+    
+    if (!Array.isArray(wallets)) {
+      return res.status(400).json({ error: 'wallets must be an array' });
+    }
+    
+    const alerts = await monitorLiquidationRisk(wallets);
+    
+    res.json({ alerts, count: alerts.length });
+    
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Monitoring failed' });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use TypeScript** for type safety
+- **Cache responses** for at least 30 seconds
+- **Handle errors gracefully** (API might be temporarily unavailable)
+- **Implement retry logic** for transient failures
+- **Rate limit your requests** according to your plan
+- **Check `aggregation_errors`** for partial failures
+- **Validate wallet addresses** before sending requests
+- **Use environment variables** for API keys
+
+### ❌ DON'T
+
+- **Don't expose API keys** in client-side code
+- **Don't spam the API** - respect rate limits
+- **Don't ignore `defi_score: null`** - handle wallets with no positions
+- **Don't assume all fields are present** - use optional chaining (`?.`)
+- **Don't refetch every second** - use the 30s cache
+- **Don't hardcode URLs** - use environment variables
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/python" className="button button--primary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/examples/go" className="button button--secondary button--lg">
+    🔷 Go Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices Guide
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a full SDK?** Coming Q2 2026 - star us on [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---

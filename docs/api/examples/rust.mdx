@@ -1,0 +1,1207 @@
+---
+sidebar_position: 8
+title: "Rust Examples"
+description: "Complete Rust code examples for blockchain and DeFi applications"
+---
+
+# Rust Examples
+
+Complete, production-ready code examples for integrating Kixago API in Rust applications. **Perfect for blockchain developers!** 🦀
+
+---
+
+## Quick Start
+
+### Installation (Cargo.toml)
+
+```toml
+[package]
+name = "kixago-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# HTTP Client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Decimal for precise calculations
+rust_decimal = { version = "1.33", features = ["serde-float"] }
+
+# DateTime
+chrono = { version = "0.4", features = ["serde"] }
+
+# Environment variables
+dotenv = "0.15"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Optional: Caching
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Optional: CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Optional: Testing
+mockito = "1.2"
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request
+
+```rust
+// src/main.rs
+use reqwest;
+use serde::Deserialize;
+use std::env;
+
+#[derive(Debug, Deserialize)]
+struct DeFiScore {
+    defi_score: i32,
+    risk_level: String,
+    risk_category: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RiskProfile {
+    wallet_address: String,
+    total_collateral_usd: f64,
+    total_borrowed_usd: f64,
+    global_health_factor: f64,
+    global_ltv: f64,
+    defi_score: Option<DeFiScore>,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = env::var("KIXAGO_API_KEY")?;
+    let wallet_address = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C";
+    
+    let client = reqwest::Client::new();
+    
+    let response = client
+        .get(format!("https://api.kixago.com/v1/risk-profile/{}", wallet_address))
+        .header("X-API-Key", api_key)
+        .header("Accept", "application/json")
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await?;
+    
+    if response.status().is_success() {
+        let profile: RiskProfile = response.json().await?;
+        
+        if let Some(score) = profile.defi_score {
+            println!("DeFi Score: {}", score.defi_score);
+            println!("Risk Level: {}", score.risk_level);
+        }
+        println!("Health Factor: {:.2}", profile.global_health_factor);
+    } else {
+        eprintln!("Error: {}", response.status());
+    }
+    
+    Ok(())
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```rust
+// src/models.rs
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TokenDetail {
+    pub token: String,
+    pub amount: Decimal,
+    pub usd_value: Decimal,
+    pub token_address: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LendingPosition {
+    pub protocol: String,
+    pub protocol_version: String,
+    pub chain: String,
+    pub user_address: String,
+    pub collateral_usd: Decimal,
+    pub borrowed_usd: Decimal,
+    pub health_factor: f64,
+    pub ltv_current: f64,
+    pub is_at_risk: bool,
+    pub collateral_details: Option<Vec<TokenDetail>>,
+    pub borrowed_details: Option<Vec<TokenDetail>>,
+    pub last_updated: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ComponentScore {
+    pub component_score: f64,
+    pub weight: f64,
+    pub weighted_contribution: f64,
+    pub reasoning: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ScoreBreakdown {
+    pub health_factor_score: ComponentScore,
+    pub leverage_score: ComponentScore,
+    pub diversification_score: ComponentScore,
+    pub volatility_score: ComponentScore,
+    pub protocol_risk_score: ComponentScore,
+    pub total_internal_score: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RiskFactor {
+    pub severity: String,
+    pub factor: String,
+    pub description: String,
+    pub impact_on_score: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Recommendations {
+    pub immediate: Vec<String>,
+    pub short_term: Vec<String>,
+    pub long_term: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LiquidationScenario {
+    pub event: String,
+    pub new_health_factor: f64,
+    pub status: String,
+    pub time_estimate: Option<String>,
+    pub estimated_loss: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LiquidationSimulation {
+    pub current_health_factor: f64,
+    pub liquidation_threshold: f64,
+    pub buffer_percentage: f64,
+    pub scenarios: Vec<LiquidationScenario>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeFiScore {
+    pub defi_score: i32,
+    pub risk_level: String,
+    pub risk_category: String,
+    pub color: String,
+    pub score_breakdown: ScoreBreakdown,
+    pub risk_factors: Vec<RiskFactor>,
+    pub recommendations: Recommendations,
+    pub liquidation_simulation: LiquidationSimulation,
+    pub calculated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RiskProfileResponse {
+    pub wallet_address: String,
+    pub total_collateral_usd: Decimal,
+    pub total_borrowed_usd: Decimal,
+    pub global_health_factor: f64,
+    pub global_ltv: f64,
+    pub positions_at_risk_count: i32,
+    pub last_updated: DateTime<Utc>,
+    pub aggregation_duration: String,
+    pub lending_positions: Vec<LendingPosition>,
+    pub defi_score: Option<DeFiScore>,
+    pub aggregation_errors: Option<HashMap<String, String>>,
+}
+
+impl RiskProfileResponse {
+    /// Check if any positions are at risk
+    pub fn has_positions_at_risk(&self) -> bool {
+        self.positions_at_risk_count > 0
+    }
+    
+    /// Get positions for a specific chain
+    pub fn positions_for_chain(&self, chain: &str) -> Vec<&LendingPosition> {
+        self.lending_positions
+            .iter()
+            .filter(|p| p.chain == chain)
+            .collect()
+    }
+    
+    /// Get total collateral for a specific protocol
+    pub fn collateral_for_protocol(&self, protocol: &str) -> Decimal {
+        self.lending_positions
+            .iter()
+            .filter(|p| p.protocol == protocol)
+            .map(|p| p.collateral_usd)
+            .sum()
+    }
+}
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```rust
+// src/error.rs
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum KixagoError {
+    #[error("HTTP request failed: {0}")]
+    Http(#[from] reqwest::Error),
+    
+    #[error("Invalid API key")]
+    Unauthorized,
+    
+    #[error("Invalid wallet address: {0}")]
+    InvalidAddress(String),
+    
+    #[error("Rate limit exceeded - retry after {0}s")]
+    RateLimited(u64),
+    
+    #[error("Server error: {0}")]
+    ServerError(String),
+    
+    #[error("Deserialization failed: {0}")]
+    Deserialization(#[from] serde_json::Error),
+    
+    #[error("API error {status}: {message}")]
+    Api { status: u16, message: String },
+}
+
+pub type Result<T> = std::result::Result<T, KixagoError>;
+
+// src/client.rs
+use crate::error::{KixagoError, Result};
+use crate::models::RiskProfileResponse;
+use reqwest::{Client, StatusCode};
+use serde_json::Value;
+use std::time::Duration;
+use tracing::{info, warn};
+
+pub struct KixagoClient {
+    client: Client,
+    api_key: String,
+    base_url: String,
+}
+
+impl KixagoClient {
+    /// Create a new Kixago API client
+    pub fn new(api_key: String) -> Self {
+        Self::with_base_url(api_key, "https://api.kixago.com".to_string())
+    }
+    
+    /// Create a client with custom base URL
+    pub fn with_base_url(api_key: String, base_url: String) -> Self {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .expect("Failed to build HTTP client");
+        
+        Self {
+            client,
+            api_key,
+            base_url,
+        }
+    }
+    
+    /// Get risk profile for a wallet address
+    pub async fn get_risk_profile(&self, wallet_address: &str) -> Result<RiskProfileResponse> {
+        if wallet_address.is_empty() {
+            return Err(KixagoError::InvalidAddress("Address cannot be empty".to_string()));
+        }
+        
+        info!("Fetching risk profile for {}", wallet_address);
+        
+        let url = format!("{}/v1/risk-profile/{}", self.base_url, wallet_address);
+        
+        let response = self
+            .client
+            .get(&url)
+            .header("X-API-Key", &self.api_key)
+            .header("Accept", "application/json")
+            .send()
+            .await?;
+        
+        self.handle_response(response).await
+    }
+    
+    async fn handle_response(&self, response: reqwest::Response) -> Result<RiskProfileResponse> {
+        let status = response.status();
+        
+        match status {
+            StatusCode::OK => {
+                let profile: RiskProfileResponse = response.json().await?;
+                
+                // Warn about partial failures
+                if let Some(errors) = &profile.aggregation_errors {
+                    if !errors.is_empty() {
+                        warn!("⚠️ Partial failure: {:?}", errors.keys());
+                    }
+                }
+                
+                Ok(profile)
+            }
+            
+            StatusCode::BAD_REQUEST => {
+                let error: Value = response.json().await?;
+                let message = error["error"]
+                    .as_str()
+                    .unwrap_or("Invalid request")
+                    .to_string();
+                Err(KixagoError::InvalidAddress(message))
+            }
+            
+            StatusCode::UNAUTHORIZED => Err(KixagoError::Unauthorized),
+            
+            StatusCode::TOO_MANY_REQUESTS => {
+                let retry_after = response
+                    .headers()
+                    .get("Retry-After")
+                    .and_then(|h| h.to_str().ok())
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(5);
+                
+                Err(KixagoError::RateLimited(retry_after))
+            }
+            
+            StatusCode::INTERNAL_SERVER_ERROR => {
+                Err(KixagoError::ServerError("Internal server error".to_string()))
+            }
+            
+            _ => {
+                let error: Value = response.json().await.unwrap_or_default();
+                let message = error["error"]
+                    .as_str()
+                    .unwrap_or("Unknown error")
+                    .to_string();
+                
+                Err(KixagoError::Api {
+                    status: status.as_u16(),
+                    message,
+                })
+            }
+        }
+    }
+}
+
+// Usage
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
+    
+    dotenv::dotenv().ok();
+    
+    let api_key = std::env::var("KIXAGO_API_KEY")?;
+    let client = KixagoClient::new(api_key);
+    
+    match client.get_risk_profile("0xf0bb20865277aBd641a307eCe5Ee04E79073416C").await {
+        Ok(profile) => {
+            if let Some(score) = profile.defi_score {
+                println!("DeFi Score: {}", score.defi_score);
+                println!("Risk Level: {}", score.risk_level);
+            }
+            println!("Health Factor: {:.2}", profile.global_health_factor);
+        }
+        Err(e) => eprintln!("Error: {}", e),
+    }
+    
+    Ok(())
+}
+```
+
+---
+
+## Caching Implementation
+
+### Example 4: Redis Cache
+
+```rust
+// src/cache.rs
+use crate::error::Result;
+use crate::models::RiskProfileResponse;
+use redis::{aio::ConnectionManager, AsyncCommands};
+use std::time::Duration;
+use tracing::{info, warn};
+
+pub struct RedisCache {
+    conn: ConnectionManager,
+    ttl: Duration,
+}
+
+impl RedisCache {
+    pub async fn new(redis_url: &str, ttl: Duration) -> Result<Self> {
+        let client = redis::Client::open(redis_url)
+            .map_err(|e| crate::error::KixagoError::ServerError(e.to_string()))?;
+        
+        let conn = ConnectionManager::new(client)
+            .await
+            .map_err(|e| crate::error::KixagoError::ServerError(e.to_string()))?;
+        
+        Ok(Self { conn, ttl })
+    }
+    
+    pub async fn get(&mut self, key: &str) -> Option<RiskProfileResponse> {
+        let cache_key = format!("kixago:profile:{}", key);
+        
+        let cached: Option<String> = self.conn.get(&cache_key).await.ok()?;
+        
+        cached.and_then(|data| {
+            serde_json::from_str(&data).ok()
+        })
+    }
+    
+    pub async fn set(&mut self, key: &str, value: &RiskProfileResponse) -> Result<()> {
+        let cache_key = format!("kixago:profile:{}", key);
+        let serialized = serde_json::to_string(value)?;
+        
+        self.conn
+            .set_ex(&cache_key, serialized, self.ttl.as_secs())
+            .await
+            .map_err(|e| crate::error::KixagoError::ServerError(e.to_string()))?;
+        
+        Ok(())
+    }
+}
+
+// src/cached_client.rs
+use crate::cache::RedisCache;
+use crate::client::KixagoClient;
+use crate::error::Result;
+use crate::models::RiskProfileResponse;
+use tracing::info;
+
+pub struct CachedKixagoClient {
+    client: KixagoClient,
+    cache: RedisCache,
+}
+
+impl CachedKixagoClient {
+    pub async fn new(api_key: String, redis_url: &str) -> Result<Self> {
+        let client = KixagoClient::new(api_key);
+        let cache = RedisCache::new(redis_url, std::time::Duration::from_secs(30)).await?;
+        
+        Ok(Self { client, cache })
+    }
+    
+    pub async fn get_risk_profile(&mut self, wallet_address: &str) -> Result<RiskProfileResponse> {
+        // Try cache first
+        if let Some(cached) = self.cache.get(wallet_address).await {
+            info!("✅ Cache HIT for {}", wallet_address);
+            return Ok(cached);
+        }
+        
+        info!("❌ Cache MISS for {}", wallet_address);
+        
+        // Fetch from API
+        let profile = self.client.get_risk_profile(wallet_address).await?;
+        
+        // Cache the result
+        if let Err(e) = self.cache.set(wallet_address, &profile).await {
+            warn!("Failed to cache result: {}", e);
+        }
+        
+        Ok(profile)
+    }
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 5: Credit Underwriting Service
+
+```rust
+// src/underwriting.rs
+use crate::client::KixagoClient;
+use crate::error::Result;
+use rust_decimal::Decimal;
+use std::str::FromStr;
+use tracing::error;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Decision {
+    Approved,
+    Declined,
+    ManualReview,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnderwritingDecision {
+    pub decision: Decision,
+    pub reason: String,
+    pub defi_score: Option<i32>,
+    pub risk_category: Option<String>,
+    pub max_loan_amount: Option<Decimal>,
+    pub conditions: Vec<String>,
+}
+
+impl UnderwritingDecision {
+    pub fn approved(reason: String, score: i32, category: String, max_loan: Decimal) -> Self {
+        Self {
+            decision: Decision::Approved,
+            reason,
+            defi_score: Some(score),
+            risk_category: Some(category),
+            max_loan_amount: Some(max_loan),
+            conditions: vec![],
+        }
+    }
+    
+    pub fn declined(reason: String, score: Option<i32>) -> Self {
+        Self {
+            decision: Decision::Declined,
+            reason,
+            defi_score: score,
+            risk_category: None,
+            max_loan_amount: None,
+            conditions: vec![],
+        }
+    }
+    
+    pub fn manual_review(reason: String, score: Option<i32>, conditions: Vec<String>) -> Self {
+        Self {
+            decision: Decision::ManualReview,
+            reason,
+            defi_score: score,
+            risk_category: None,
+            max_loan_amount: None,
+            conditions,
+        }
+    }
+}
+
+pub struct UnderwritingService {
+    client: KixagoClient,
+}
+
+impl UnderwritingService {
+    pub fn new(client: KixagoClient) -> Self {
+        Self { client }
+    }
+    
+    pub async fn underwrite(
+        &self,
+        wallet_address: &str,
+        requested_loan_amount: Decimal,
+    ) -> UnderwritingDecision {
+        let profile = match self.client.get_risk_profile(wallet_address).await {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Error fetching profile: {}", e);
+                return UnderwritingDecision::manual_review(
+                    "Error fetching DeFi profile - manual review required".to_string(),
+                    None,
+                    vec![],
+                );
+            }
+        };
+        
+        // Check if wallet has DeFi history
+        let Some(defi_score) = profile.defi_score else {
+            return UnderwritingDecision::declined(
+                "No DeFi lending history found".to_string(),
+                None,
+            );
+        };
+        
+        let score = defi_score.defi_score;
+        let risk_category = &defi_score.risk_category;
+        let health_factor = profile.global_health_factor;
+        let collateral = profile.total_collateral_usd;
+        
+        // Rule 1: Minimum credit score
+        if score < 550 {
+            return UnderwritingDecision::declined(
+                format!("DeFi credit score too low: {}", score),
+                Some(score),
+            );
+        }
+        
+        // Rule 2: Health factor requirement
+        if health_factor > 0.0 && health_factor < 1.5 {
+            return UnderwritingDecision::declined(
+                format!("Health factor too low: {:.2} (minimum 1.5)", health_factor),
+                Some(score),
+            );
+        }
+        
+        // Rule 3: Collateral requirement (2x loan amount)
+        let min_collateral = requested_loan_amount * Decimal::from_str("2").unwrap();
+        if collateral < min_collateral {
+            return UnderwritingDecision::declined(
+                format!(
+                    "Insufficient collateral. Need ${}, have ${}",
+                    min_collateral, collateral
+                ),
+                Some(score),
+            );
+        }
+        
+        // Rule 4: Risk category checks
+        if risk_category == "URGENT_ACTION_REQUIRED" {
+            return UnderwritingDecision::declined(
+                "Critical risk factors detected - imminent liquidation risk".to_string(),
+                Some(score),
+            );
+        }
+        
+        if risk_category == "HIGH_RISK" {
+            return UnderwritingDecision::manual_review(
+                "High risk category - requires underwriter review".to_string(),
+                Some(score),
+                defi_score.recommendations.immediate.clone(),
+            );
+        }
+        
+        // Calculate max loan amount (50% of collateral)
+        let max_loan = collateral * Decimal::from_str("0.5").unwrap();
+        
+        if requested_loan_amount > max_loan {
+            return UnderwritingDecision::manual_review(
+                "Requested amount exceeds max (50% of collateral)".to_string(),
+                Some(score),
+                vec![],
+            );
+        }
+        
+        // APPROVED!
+        UnderwritingDecision::approved(
+            format!("Strong DeFi profile - Score {}, Risk: {}", score, risk_category),
+            score,
+            risk_category.clone(),
+            max_loan,
+        )
+    }
+}
+
+// Usage
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    dotenv::dotenv().ok();
+    
+    let api_key = std::env::var("KIXAGO_API_KEY")?;
+    let client = KixagoClient::new(api_key);
+    let service = UnderwritingService::new(client);
+    
+    let decision = service
+        .underwrite(
+            "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+            Decimal::from_str("500000")?,
+        )
+        .await;
+    
+    println!("Decision: {:?}", decision.decision);
+    println!("Reason: {}", decision.reason);
+    
+    Ok(())
+}
+```
+
+---
+
+### Example 6: CLI Tool
+
+```rust
+// src/main.rs (CLI)
+use clap::{Parser, Subcommand};
+use kixago::client::KixagoClient;
+use rust_decimal::Decimal;
+use std::str::FromStr;
+
+#[derive(Parser)]
+#[command(name = "kixago")]
+#[command(about = "Kixago DeFi Risk Intelligence CLI", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+    
+    /// API key (or set KIXAGO_API_KEY env var)
+    #[arg(short, long, env = "KIXAGO_API_KEY")]
+    api_key: String,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Get risk profile for a wallet
+    Profile {
+        /// Wallet address (0x... or ENS name)
+        address: String,
+    },
+    
+    /// Underwrite a loan request
+    Underwrite {
+        /// Wallet address
+        address: String,
+        
+        /// Requested loan amount in USD
+        #[arg(short, long)]
+        amount: String,
+    },
+    
+    /// Monitor multiple wallets for liquidation risk
+    Monitor {
+        /// Wallet addresses to monitor
+        addresses: Vec<String>,
+    },
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+    dotenv::dotenv().ok();
+    
+    let cli = Cli::parse();
+    let client = KixagoClient::new(cli.api_key);
+    
+    match cli.command {
+        Commands::Profile { address } => {
+            let profile = client.get_risk_profile(&address).await?;
+            
+            println!("\n=== RISK PROFILE ===");
+            println!("Wallet: {}", profile.wallet_address);
+            
+            if let Some(score) = profile.defi_score {
+                println!("DeFi Score: {} ({})", score.defi_score, score.risk_level);
+                println!("Risk Category: {}", score.risk_category);
+            } else {
+                println!("DeFi Score: N/A (no positions)");
+            }
+            
+            println!("Health Factor: {:.2}", profile.global_health_factor);
+            println!("Total Collateral: ${:.0}", profile.total_collateral_usd);
+            println!("Total Debt: ${:.0}", profile.total_borrowed_usd);
+            println!("LTV: {:.1}%", profile.global_ltv);
+            
+            println!("\nPositions: {}", profile.lending_positions.len());
+            for pos in profile.lending_positions {
+                println!("\n  {} {} on {}", pos.protocol, pos.protocol_version, pos.chain);
+                println!("    Collateral: ${:.0}", pos.collateral_usd);
+                println!("    Debt: ${:.0}", pos.borrowed_usd);
+                println!("    Health Factor: {:.3}", pos.health_factor);
+                println!("    At Risk: {}", if pos.is_at_risk { "⚠️ YES" } else { "✅ No" });
+            }
+        }
+        
+        Commands::Underwrite { address, amount } => {
+            let loan_amount = Decimal::from_str(&amount)?;
+            let service = kixago::underwriting::UnderwritingService::new(client);
+            
+            let decision = service.underwrite(&address, loan_amount).await;
+            
+            println!("\n=== UNDERWRITING DECISION ===");
+            println!("Decision: {:?}", decision.decision);
+            println!("Reason: {}", decision.reason);
+            
+            if let Some(score) = decision.defi_score {
+                println!("DeFi Score: {}", score);
+            }
+            
+            if let Some(max_loan) = decision.max_loan_amount {
+                println!("Max Loan Amount: ${:.0}", max_loan);
+            }
+        }
+        
+        Commands::Monitor { addresses } => {
+            println!("Monitoring {} wallets...\n", addresses.len());
+            
+            for address in addresses {
+                match client.get_risk_profile(&address).await {
+                    Ok(profile) => {
+                        if let Some(score) = profile.defi_score {
+                            let buffer = score.liquidation_simulation.buffer_percentage;
+                            
+                            if buffer < 10.0 {
+                                println!("⚠️ {}: {:.1}% buffer - AT RISK!", address, buffer);
+                            } else {
+                                println!("✅ {}: {:.1}% buffer - OK", address, buffer);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("❌ {}: Error - {}", address, e);
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+// Usage:
+// cargo run -- profile 0xf0bb20865277aBd641a307eCe5Ee04E79073416C
+// cargo run -- underwrite 0xf0bb... --amount 500000
+// cargo run -- monitor 0xWallet1... 0xWallet2... 0xWallet3...
+```
+
+---
+
+## Concurrent Processing
+
+### Example 7: Batch Fetching with Futures
+
+```rust
+// src/batch.rs
+use crate::client::KixagoClient;
+use crate::error::Result;
+use crate::models::RiskProfileResponse;
+use futures::future::join_all;
+use std::collections::HashMap;
+
+pub struct BatchProcessor {
+    client: KixagoClient,
+}
+
+impl BatchProcessor {
+    pub fn new(client: KixagoClient) -> Self {
+        Self { client }
+    }
+    
+    pub async fn get_multiple_profiles(
+        &self,
+        wallet_addresses: Vec<String>,
+    ) -> HashMap<String, Result<RiskProfileResponse>> {
+        // Create futures for all requests
+        let futures = wallet_addresses
+            .into_iter()
+            .map(|address| {
+                let client = &self.client;
+                async move {
+                    let result = client.get_risk_profile(&address).await;
+                    (address, result)
+                }
+            })
+            .collect::<Vec<_>>();
+        
+        // Execute concurrently
+        let results = join_all(futures).await;
+        
+        // Convert to HashMap
+        results.into_iter().collect()
+    }
+}
+
+// Usage
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let api_key = std::env::var("KIXAGO_API_KEY")?;
+    let client = KixagoClient::new(api_key);
+    let batch = BatchProcessor::new(client);
+    
+    let wallets = vec![
+        "0xWallet1...".to_string(),
+        "0xWallet2...".to_string(),
+        "0xWallet3...".to_string(),
+    ];
+    
+    let results = batch.get_multiple_profiles(wallets).await;
+    
+    for (wallet, result) in results {
+        match result {
+            Ok(profile) => println!("✅ {}: Score {}", wallet, profile.defi_score.map(|s| s.defi_score).unwrap_or(0)),
+            Err(e) => println!("❌ {}: {}", wallet, e),
+        }
+    }
+    
+    Ok(())
+}
+```
+
+---
+
+## WebAssembly (WASM) Support
+
+### Example 8: WASM Client
+
+```rust
+// src/wasm.rs (for browser-based dApps)
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Request, RequestInit, Response};
+use serde_wasm_bindgen;
+
+#[wasm_bindgen]
+pub struct WasmKixagoClient {
+    api_key: String,
+    base_url: String,
+}
+
+#[wasm_bindgen]
+impl WasmKixagoClient {
+    #[wasm_bindgen(constructor)]
+    pub fn new(api_key: String) -> Self {
+        Self {
+            api_key,
+            base_url: "https://api.kixago.com".to_string(),
+        }
+    }
+    
+    #[wasm_bindgen]
+    pub async fn get_risk_profile(&self, wallet_address: String) -> Result<JsValue, JsValue> {
+        let url = format!("{}/v1/risk-profile/{}", self.base_url, wallet_address);
+        
+        let mut opts = RequestInit::new();
+        opts.method("GET");
+        
+        let request = Request::new_with_str_and_init(&url, &opts)?;
+        
+        request.headers().set("X-API-Key", &self.api_key)?;
+        request.headers().set("Accept", "application/json")?;
+        
+        let window = web_sys::window().unwrap();
+        let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+        let resp: Response = resp_value.dyn_into()?;
+        
+        let json = JsFuture::from(resp.json()?).await?;
+        
+        Ok(json)
+    }
+}
+
+// Cargo.toml additions for WASM:
+// [lib]
+// crate-type = ["cdylib", "rlib"]
+//
+// [dependencies]
+// wasm-bindgen = "0.2"
+// wasm-bindgen-futures = "0.4"
+// web-sys = { version = "0.3", features = ["Request", "Response", "Headers", "Window"] }
+// serde-wasm-bindgen = "0.6"
+
+// Build: wasm-pack build --target web
+```
+
+---
+
+## Testing
+
+### Example 9: Unit Tests with Mockito
+
+```rust
+// tests/client_test.rs
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::{mock, server_url};
+    use serde_json::json;
+    
+    #[tokio::test]
+    async fn test_get_risk_profile_success() {
+        let wallet_address = "0xTest123";
+        
+        let _m = mock("GET", format!("/v1/risk-profile/{}", wallet_address).as_str())
+            .match_header("X-API-Key", "test-key")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(json!({
+                "wallet_address": wallet_address,
+                "total_collateral_usd": "100000.0",
+                "total_borrowed_usd": "30000.0",
+                "global_health_factor": 3.2,
+                "global_ltv": 30.0,
+                "positions_at_risk_count": 0,
+                "last_updated": "2025-01-15T12:00:00Z",
+                "aggregation_duration": "1.234s",
+                "lending_positions": [],
+                "defi_score": {
+                    "defi_score": 750,
+                    "risk_level": "Very Low Risk",
+                    "risk_category": "VERY_LOW_RISK",
+                    "color": "green",
+                    "score_breakdown": {},
+                    "risk_factors": [],
+                    "recommendations": {
+                        "immediate": [],
+                        "short_term": [],
+                        "long_term": []
+                    },
+                    "liquidation_simulation": {
+                        "current_health_factor": 3.2,
+                        "liquidation_threshold": 1.0,
+                        "buffer_percentage": 220.0,
+                        "scenarios": []
+                    },
+                    "calculated_at": "2025-01-15T12:00:00Z"
+                }
+            }).to_string())
+            .create();
+        
+        let client = KixagoClient::with_base_url("test-key".to_string(), server_url());
+        let result = client.get_risk_profile(wallet_address).await;
+        
+        assert!(result.is_ok());
+        let profile = result.unwrap();
+        assert_eq!(profile.wallet_address, wallet_address);
+        assert_eq!(profile.defi_score.unwrap().defi_score, 750);
+    }
+    
+    #[tokio::test]
+    async fn test_get_risk_profile_unauthorized() {
+        let wallet_address = "0xTest123";
+        
+        let _m = mock("GET", format!("/v1/risk-profile/{}", wallet_address).as_str())
+            .with_status(401)
+            .with_body(json!({"error": "Invalid API key"}).to_string())
+            .create();
+        
+        let client = KixagoClient::with_base_url("bad-key".to_string(), server_url());
+        let result = client.get_risk_profile(wallet_address).await;
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            KixagoError::Unauthorized => (),
+            e => panic!("Expected Unauthorized error, got: {:?}", e),
+        }
+    }
+    
+    #[test]
+    fn test_risk_profile_helper_methods() {
+        let mut profile = RiskProfileResponse {
+            // ... initialize fields
+            lending_positions: vec![
+                LendingPosition {
+                    protocol: "Aave".to_string(),
+                    chain: "Ethereum".to_string(),
+                    collateral_usd: Decimal::from_str("100000").unwrap(),
+                    // ... other fields
+                },
+            ],
+            positions_at_risk_count: 1,
+            // ...
+        };
+        
+        assert!(profile.has_positions_at_risk());
+        
+        let eth_positions = profile.positions_for_chain("Ethereum");
+        assert_eq!(eth_positions.len(), 1);
+        
+        let aave_collateral = profile.collateral_for_protocol("Aave");
+        assert_eq!(aave_collateral, Decimal::from_str("100000").unwrap());
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use `Result<T, E>` for error handling** - Never `unwrap()` in production
+- **Implement `thiserror` for custom errors** - Clean error types
+- **Use `async/await` with Tokio** - Efficient concurrency
+- **Use `BigDecimal` for money** - Precise calculations
+- **Implement proper logging** - `tracing` crate
+- **Use environment variables** - Never hardcode secrets
+- **Write comprehensive tests** - Unit + integration
+- **Use strong typing** - Leverage Rust's type system
+- **Handle partial failures** - Check `aggregation_errors`
+
+### ❌ DON'T
+
+- **Don't use `unwrap()` in production** - Use `?` or proper error handling
+- **Don't use `f64` for money** - Precision loss!
+- **Don't ignore `Result`** - Always handle errors
+- **Don't block async runtime** - Use `spawn_blocking` for CPU-intensive work
+- **Don't expose API keys** - Use environment variables
+- **Don't create new client per request** - Reuse HTTP client
+- **Don't skip error context** - Use `anyhow` for application errors
+
+---
+
+## Performance Tips
+
+### Zero-Copy Deserialization
+
+```rust
+// Use borrowed strings where possible
+#[derive(Deserialize)]
+struct OptimizedTokenDetail<'a> {
+    #[serde(borrow)]
+    token: &'a str,
+    amount: Decimal,
+    usd_value: Decimal,
+    #[serde(borrow)]
+    token_address: &'a str,
+}
+```
+
+### Connection Pooling
+
+```rust
+// HTTP client already pools connections by default
+let client = Client::builder()
+    .pool_max_idle_per_host(10)
+    .timeout(Duration::from_secs(30))
+    .build()?;
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/go" className="button button--primary button--lg">
+    🔷 Go Examples
+  </a>
+  <a href="/api/examples/java" className="button button--secondary button--lg">
+    ☕ Java Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Rust SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+- **WebAssembly support?** Check out the WASM example above for browser dApps!
+
+---
+
+## Why Rust for DeFi?
+
+Rust is the **#1 choice for blockchain development** because:
+
+- 🦀 **Memory safety without garbage collection**
+- ⚡ **Performance comparable to C/C++**
+- 🔒 **Fearless concurrency** with ownership model
+- 🌐 **WebAssembly support** for browser-based dApps
+- 🏗️ **Strong type system** catches bugs at compile time
+- 📦 **Excellent tooling** (Cargo, rustfmt, clippy)
+
+**Popular crypto projects using Rust:**
+- Solana blockchain
+- Polkadot/Substrate
+- Near Protocol
+- Diem (formerly Libra)
+- Parity Ethereum client
+```
+
+---

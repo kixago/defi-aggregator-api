@@ -1,444 +1,603 @@
 /**
- * Kixago Documentation - Custom Styles
- * Clean, modern, developer-friendly design
+ * Kixago Documentation - Enterprise Design System
+ * Professional, Modern, Consistent with Main App
  */
 
 /* ============================================================
-   1. COLOR PALETTE - Brand Colors
+   1. COLOR PALETTE - Matching Your Frontend
    ============================================================ */
 
 :root {
-  /* Primary Brand Color - Adjust to your brand */
-  --ifm-color-primary: #0070f3;
-  --ifm-color-primary-dark: #0062d1;
-  --ifm-color-primary-darker: #005dc4;
-  --ifm-color-primary-darkest: #004ca2;
-  --ifm-color-primary-light: #3291ff;
-  --ifm-color-primary-lighter: #4d9eff;
-  --ifm-color-primary-lightest: #80b8ff;
+  /* Primary Brand Color - Professional Blue (matches your app) */
+  --ifm-color-primary: #4066F5;  /* Converted from oklch(0.55 0.22 250) */
+  --ifm-color-primary-dark: #2E53E4;
+  --ifm-color-primary-darker: #2449D6;
+  --ifm-color-primary-darkest: #1A38B3;
+  --ifm-color-primary-light: #5A7DF7;
+  --ifm-color-primary-lighter: #7393F9;
+  --ifm-color-primary-lightest: #A6BCFC;
 
-  /* Success/Error Colors */
-  --ifm-color-success: #00c853;
-  --ifm-color-danger: #ff1744;
-  --ifm-color-warning: #ffc107;
+  /* Accent - Sophisticated Orange for CTAs */
+  --ifm-color-accent: #FF6B35;  /* Burnt orange accent */
+  --ifm-color-accent-dark: #E55A2B;
+  --ifm-color-accent-light: #FF8659;
 
-  /* Code Block Colors */
+  /* Success/Warning/Danger - Enterprise Standards */
+  --ifm-color-success: #10B981;
+  --ifm-color-warning: #F59E0B;
+  --ifm-color-danger: #EF4444;
+  --ifm-color-info: #3B82F6;
+
+  /* Backgrounds & Surfaces */
+  --ifm-background-color: #FFFFFF;
+  --ifm-background-surface-color: #F9FAFB;
+  --ifm-color-emphasis-0: #FFFFFF;
+  --ifm-color-emphasis-100: #F3F4F6;
+  --ifm-color-emphasis-200: #E5E7EB;
+  --ifm-color-emphasis-300: #D1D5DB;
+  --ifm-color-emphasis-400: #9CA3AF;
+  --ifm-color-emphasis-500: #6B7280;
+  --ifm-color-emphasis-600: #4B5563;
+  --ifm-color-emphasis-700: #374151;
+  --ifm-color-emphasis-800: #1F2937;
+  --ifm-color-emphasis-900: #111827;
+
+  /* Typography */
+  --ifm-font-family-base: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
   --ifm-code-font-size: 14px;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 112, 243, 0.1);
+  --ifm-navbar-height: 64px;
 
-  /* Layout */
-  --ifm-navbar-height: 60px;
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --ifm-font-family-monospace: 'Fira Code', 'Courier New', monospace;
+  /* Shadows - Subtle Depth */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-/* Dark Mode Colors */
+/* Dark Mode - Sophisticated Dark Theme */
 [data-theme='dark'] {
-  --ifm-color-primary: #4d9eff;
-  --ifm-color-primary-dark: #1a85ff;
-  --ifm-color-primary-darker: #0070f3;
-  --ifm-color-primary-darkest: #005dc4;
-  --ifm-color-primary-light: #80b8ff;
-  --ifm-color-primary-lighter: #99c7ff;
-  --ifm-color-primary-lightest: #cce3ff;
+  --ifm-color-primary: #7393F9;
+  --ifm-color-primary-dark: #5A7DF7;
+  --ifm-color-primary-darker: #4066F5;
+  --ifm-color-primary-darkest: #2E53E4;
+  --ifm-color-primary-light: #8CA7FB;
+  --ifm-color-primary-lighter: #A6BCFC;
+  --ifm-color-primary-lightest: #C8D4FD;
+
+  --ifm-color-accent: #FF8659;
+  --ifm-color-accent-dark: #FF6B35;
   
-  --ifm-background-color: #0d1117;
-  --ifm-background-surface-color: #161b22;
+  --ifm-background-color: #0F111A;
+  --ifm-background-surface-color: #1A1D2E;
+  --ifm-color-emphasis-0: #0F111A;
+  --ifm-color-emphasis-100: #1A1D2E;
+  --ifm-color-emphasis-200: #252837;
+  --ifm-color-emphasis-300: #353849;
+  --ifm-color-emphasis-400: #4A4D5E;
+  --ifm-color-emphasis-500: #6B6F81;
+  --ifm-color-emphasis-600: #8B8FA3;
+  --ifm-color-emphasis-700: #B8BCC8;
+  --ifm-color-emphasis-800: #E2E4E9;
+  --ifm-color-emphasis-900: #F7F8FA;
+
+  --docusaurus-highlighted-code-line-bg: rgba(115, 147, 249, 0.15);
+}
+
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ============================================================
+   2. HOMEPAGE HERO - Professional Gradient
+   ============================================================ */
+
+.hero-banner {
+  padding: 6rem 0 4rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-primary-dark) 100%);
+  color: white;
+}
+
+/* Animated background pattern */
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  animation: float 20s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(1deg); }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-title {
+  font-size: 4rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: white;
+  letter-spacing: -0.02em;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-subtitle {
+  font-size: 1.75rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  opacity: 0.95;
+  color: white;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.hero-tagline {
+  font-size: 1.125rem;
+  max-width: 700px;
+  margin: 0 auto 2.5rem;
+  opacity: 0.9;
+  color: white;
+  line-height: 1.6;
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+.hero-buttons .button {
+  min-width: 180px;
+}
+
+.btn-hero-primary {
+  background: white !important;
+  color: var(--ifm-color-primary) !important;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  border: none;
+}
+
+.btn-hero-primary:hover {
+  background: var(--ifm-color-emphasis-100) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.btn-hero-secondary {
+  background: transparent !important;
+  border: 2px solid white !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.btn-hero-secondary:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px);
 }
 
 /* ============================================================
-   2. TYPOGRAPHY - Clean & Readable
+   3. FEATURE SECTION - Clean Cards
    ============================================================ */
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
+.features-section {
+  padding: 5rem 0;
+  background: var(--ifm-background-color);
+}
+
+.section-title {
+  font-size: 2.75rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--ifm-color-emphasis-900);
   letter-spacing: -0.02em;
 }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-}
-
-h2 {
-  font-size: 2rem;
-  margin-top: 3rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--ifm-color-emphasis-300);
-}
-
-h3 {
-  font-size: 1.5rem;
-  margin-top: 2rem;
-  margin-bottom: 0.75rem;
-}
-
-p {
-  line-height: 1.7;
-  font-size: 16px;
-}
-
-/* ============================================================
-   3. CODE BLOCKS - Beautiful Syntax Highlighting
-   ============================================================ */
-
-code {
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 0.9em;
-  background: var(--ifm-color-emphasis-100);
-}
-
-pre code {
-  padding: 0;
-  background: none;
-}
-
-.prism-code {
-  font-size: 14px;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-/* Line numbers */
-.prism-code .token-line::before {
-  content: attr(data-line);
-  color: var(--ifm-color-emphasis-600);
-  margin-right: 1rem;
-}
-
-/* Copy button styling */
-.clean-btn {
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.clean-btn:hover {
-  transform: translateY(-1px);
-}
-
-/* ============================================================
-   4. TABLES - Clean Data Display
-   ============================================================ */
-
-table {
-  width: 100%;
-  margin: 2rem 0;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-th {
-  background: var(--ifm-color-emphasis-100);
-  font-weight: 600;
-  text-align: left;
-  padding: 12px 16px;
-  border: 1px solid var(--ifm-color-emphasis-300);
-}
-
-td {
-  padding: 12px 16px;
-  border: 1px solid var(--ifm-color-emphasis-300);
-}
-
-tr:hover {
-  background: var(--ifm-color-emphasis-50);
-}
-
-/* Status badges in tables */
-td code {
-  font-size: 0.85em;
-}
-
-/* ============================================================
-   5. CALLOUTS & ADMONITIONS - Info Boxes
-   ============================================================ */
-
-.admonition {
-  border-radius: 8px;
-  margin: 1.5rem 0;
-  padding: 1rem 1.5rem;
-  border-left: 4px solid;
-}
-
-.admonition-heading {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-/* Info callout */
-.admonition-info {
-  background: #e3f2fd;
-  border-color: #2196f3;
-}
-
-[data-theme='dark'] .admonition-info {
-  background: rgba(33, 150, 243, 0.1);
-}
-
-/* Warning callout */
-.admonition-warning {
-  background: #fff3e0;
-  border-color: #ff9800;
-}
-
-[data-theme='dark'] .admonition-warning {
-  background: rgba(255, 152, 0, 0.1);
-}
-
-/* Danger callout */
-.admonition-danger {
-  background: #ffebee;
-  border-color: #f44336;
-}
-
-[data-theme='dark'] .admonition-danger {
-  background: rgba(244, 67, 54, 0.1);
-}
-
-/* Success callout */
-.admonition-tip {
-  background: #e8f5e9;
-  border-color: #4caf50;
-}
-
-[data-theme='dark'] .admonition-tip {
-  background: rgba(76, 175, 80, 0.1);
-}
-
-/* ============================================================
-   6. NAVBAR - Sleek Header
-   ============================================================ */
-
-.navbar {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(10px);
-}
-
-.navbar__brand {
-  font-weight: 600;
-  font-size: 1.2rem;
-}
-
-.navbar__link {
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.navbar__link:hover {
-  color: var(--ifm-color-primary);
-}
-
-/* ============================================================
-   7. SIDEBAR - Clean Navigation
-   ============================================================ */
-
-.menu__link {
-  border-radius: 6px;
-  padding: 6px 12px;
-  transition: background 0.2s ease;
-}
-
-.menu__link:hover {
-  background: var(--ifm-color-emphasis-100);
-}
-
-.menu__link--active {
-  background: var(--ifm-color-primary-lightest);
-  color: var(--ifm-color-primary-darkest);
-  font-weight: 600;
-}
-
-[data-theme='dark'] .menu__link--active {
-  background: rgba(77, 158, 255, 0.2);
-  color: var(--ifm-color-primary-light);
-}
-
-.menu__caret::before {
-  background: var(--ifm-menu-link-sublist-icon) 50% / 1.5rem 1.5rem;
-}
-
-/* ============================================================
-   8. BUTTONS - Call to Actions
-   ============================================================ */
-
-.button {
-  border-radius: 6px;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  transition: all 0.2s ease;
-  border: 2px solid transparent;
-}
-
-.button--primary {
-  background: var(--ifm-color-primary);
-  color: white;
-}
-
-.button--primary:hover {
-  background: var(--ifm-color-primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 112, 243, 0.3);
-}
-
-.button--secondary {
-  background: transparent;
-  border-color: var(--ifm-color-primary);
-  color: var(--ifm-color-primary);
-}
-
-.button--secondary:hover {
-  background: var(--ifm-color-primary);
-  color: white;
-}
-
-/* ============================================================
-   9. API REFERENCE STYLES - OpenAPI Plugin
-   ============================================================ */
-
-/* Method badges */
-.openapi-method {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  margin-right: 8px;
-}
-
-.openapi-method.get {
-  background: #61affe;
-  color: white;
-}
-
-.openapi-method.post {
-  background: #49cc90;
-  color: white;
-}
-
-.openapi-method.put {
-  background: #fca130;
-  color: white;
-}
-
-.openapi-method.delete {
-  background: #f93e3e;
-  color: white;
-}
-
-/* Response examples */
-.openapi-example {
-  background: var(--ifm-color-emphasis-100);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-/* ============================================================
-   10. CUSTOM COMPONENTS - Reusable Elements
-   ============================================================ */
-
-/* Stats grid for homepage */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin: 2rem 0;
-}
-
-.stat-card {
-  background: var(--ifm-color-emphasis-100);
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--ifm-color-emphasis-300);
-}
-
-.stat-card h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+.section-subtitle {
   font-size: 1.25rem;
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 3.5rem;
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.6;
 }
 
-.stat-card p {
-  margin: 0;
-  color: var(--ifm-color-emphasis-700);
-}
-
-/* Feature cards */
 .feature-card {
-  padding: 1.5rem;
-  border: 2px solid var(--ifm-color-emphasis-300);
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  background: var(--ifm-background-surface-color);
+  border-radius: 12px;
+  padding: 2rem;
+  height: 100%;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ifm-color-primary), var(--ifm-color-accent));
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
 }
 
 .feature-card:hover {
-  border-color: var(--ifm-color-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--ifm-color-primary-lighter);
 }
 
-/* Status badges */
-.badge {
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 1.25rem;
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  animation: bounce 2s infinite;
+  animation-delay: calc(var(--index) * 0.1s);
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.feature-card h3 {
+  font-size: 1.375rem;
   font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--ifm-color-emphasis-900);
+}
+
+.feature-card p {
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   4. LIVE EXAMPLE SECTION - Code Showcase
+   ============================================================ */
+
+.example-section {
+  padding: 5rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+[data-theme='dark'] .example-section {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.code-showcase {
+  max-width: 900px;
+  margin: 0 auto 3rem;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.stat-card {
+  background: var(--ifm-background-color);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--ifm-color-primary);
+}
+
+.stat-number {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 1rem;
+  color: var(--ifm-color-emphasis-600);
+  font-weight: 500;
+}
+
+/* ============================================================
+   5. SCORE TABLE - Professional Data Display
+   ============================================================ */
+
+.score-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 3rem;
+}
+
+.score-table thead tr {
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-primary-dark));
+  color: white;
+}
+
+.score-table th {
+  padding: 1.25rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.badge-success {
-  background: #e8f5e9;
-  color: #2e7d32;
+.score-table td {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-color);
 }
 
-.badge-warning {
-  background: #fff3e0;
-  color: #e65100;
+.score-table tbody tr {
+  transition: all 0.2s ease;
 }
 
-.badge-info {
-  background: #e3f2fd;
-  color: #1565c0;
+.score-table tbody tr:hover {
+  background: var(--ifm-background-surface-color);
+  transform: scale(1.01);
+}
+
+.risk-badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.5rem;
+}
+
+.risk-low {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+}
+
+.risk-medium {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: white;
+}
+
+.risk-high {
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }
 
 /* ============================================================
-   11. RESPONSIVE DESIGN - Mobile Friendly
+   6. USE CASE CARDS - Interactive Showcase
    ============================================================ */
 
-@media (max-width: 768px) {
-  h1 {
-    font-size: 2rem;
-  }
+.use-case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
 
-  h2 {
-    font-size: 1.5rem;
-  }
+.use-case-card {
+  background: var(--ifm-background-color);
+  border-radius: 12px;
+  padding: 2rem;
+  border: 2px solid var(--ifm-color-emphasis-200);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
 
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+.use-case-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--ifm-color-primary), var(--ifm-color-accent));
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
 
-  table {
-    font-size: 12px;
-  }
+.use-case-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--ifm-color-primary);
+}
 
-  th, td {
-    padding: 8px;
-  }
+.use-case-card:hover::after {
+  transform: translateY(0);
+}
+
+.use-case-icon {
+  font-size: 2rem;
+  margin-right: 0.75rem;
+  vertical-align: middle;
+}
+
+.use-case-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--ifm-color-emphasis-900);
+}
+
+.use-case-subtitle {
+  color: var(--ifm-color-primary);
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.use-case-description {
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.use-case-example {
+  font-style: italic;
+  color: var(--ifm-color-emphasis-500);
+  padding-top: 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
 }
 
 /* ============================================================
-   12. ANIMATIONS - Subtle Motion
+   7. CTA SECTION - Compelling Call to Action
    ============================================================ */
 
-@keyframes fadeIn {
+.cta-section {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-accent) 100%);
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.cta-content {
+  position: relative;
+  z-index: 1;
+}
+
+.cta-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.cta-subtitle {
+  font-size: 1.375rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.95;
+  color: white;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.cta-note {
+  margin-top: 2rem;
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+/* ============================================================
+   8. TRUSTED BY SECTION - Social Proof
+   ============================================================ */
+
+.trusted-section {
+  padding: 3rem 0;
+  background: var(--ifm-background-color);
+  text-align: center;
+}
+
+.trusted-title {
+  font-size: 1.125rem;
+  color: var(--ifm-color-emphasis-500);
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.trusted-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+  opacity: 0.7;
+  filter: grayscale(100%);
+  transition: all 0.3s ease;
+}
+
+.trusted-logos:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+}
+
+.trusted-logo {
+  font-size: 1rem;
+  color: var(--ifm-color-emphasis-600);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   9. ANIMATIONS - Smooth Interactions
+   ============================================================ */
+
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -446,173 +605,128 @@ td code {
   }
 }
 
-.markdown {
-  animation: fadeIn 0.3s ease-out;
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.6s ease-out both;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.6s ease-out both;
 }
 
 /* ============================================================
-   13. ACCESSIBILITY - A11y Improvements
+   10. RESPONSIVE ADJUSTMENTS
    ============================================================ */
 
-/* Focus states */
-a:focus,
-button:focus,
-.menu__link:focus {
-  outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 2px;
-}
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
 
-/* Skip to main content link */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: var(--ifm-color-primary);
-  color: white;
-  padding: 8px;
-  text-decoration: none;
-  z-index: 100;
-}
+  .hero-subtitle {
+    font-size: 1.25rem;
+  }
 
-.skip-link:focus {
-  top: 0;
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-buttons .button {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .use-case-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .score-table {
+    font-size: 0.875rem;
+  }
+
+  .score-table th,
+  .score-table td {
+    padding: 0.75rem;
+  }
 }
 
 /* ============================================================
-   14. PRINT STYLES - Documentation Printing
+   11. GLASSMORPHISM & MODERN EFFECTS
    ============================================================ */
 
-@media print {
-  .navbar,
-  .sidebar,
-  .pagination-nav,
-  .edit-page-link {
-    display: none !important;
-  }
-
-  .main-wrapper {
-    max-width: 100%;
-  }
-
-  a {
-    color: black;
-    text-decoration: underline;
-  }
-
-  pre {
-    border: 1px solid #ddd;
-  }
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* --- HOMEPAGE SPECIFIC STYLES --- */
-
-.heroBanner {
-  /* This ensures the hero section is tall */
-  padding: 4rem 0; 
-  /* Example style: use a lighter version of your primary color */
-  background-color: var(--ifm-color-primary-lightest);
-  /* Center the content */
-  text-align: center;
+[data-theme='dark'] .glass-card {
+  background: rgba(26, 29, 46, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-[data-theme='dark'] .heroBanner {
-  /* Adjust for dark mode */
-  background-color: var(--ifm-background-color); 
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.heroTitle {
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 0.5rem;
-}
-
-.heroSubtitle {
-  font-size: 1.5rem;
-  color: var(--ifm-color-emphasis-700);
-  margin-bottom: 2rem;
-}
-/* --- FEATURE CARD STYLES --- */
-
-.feature {
-  /* Adds margin below each feature column, usually not needed if you use Infima spacing */
-  margin-bottom: 2rem; 
-}
-
-.featureCard {
-  /* Your existing definition in your custom.css is pretty good, but check for any overrides */
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.featureIcon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-/* --- QUICK START/CTA STYLES --- */
-
-.quickStartSection,
-.useCaseSection,
-.ctaSection {
-  padding: 4rem 0;
-}
-
-.sectionTitle {
-  font-size: 2rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
-
-.sectionSubtitle {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: var(--ifm-color-emphasis-700);
-}
-
-.codeBlockContainer {
-  /* Style for the container wrapping the code and copy button */
-  border-radius: 8px;
+/* Button shine effect */
+.btn-shine {
+  position: relative;
   overflow: hidden;
-  box-shadow: var(--ifm-global-shadow-md);
-  margin-bottom: 2rem;
 }
 
-.codeBlockHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: var(--ifm-background-surface-color);
-  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+.btn-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s;
 }
 
-.codeBlockLang {
-  font-weight: 600;
-  color: var(--ifm-color-emphasis-700);
+.btn-shine:hover::before {
+  left: 100%;
 }
 
-/* Styles for the code block itself */
-.codeBlock {
-  padding: 1rem !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-}
-
-/* Styles for the stats cards (which you already defined as .stat-card) */
-.stat-card {
-  text-align: center;
-}
-
-.statNumber {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: var(--ifm-color-primary);
-  line-height: 1;
-}
+/* Keep your existing styles below this line */

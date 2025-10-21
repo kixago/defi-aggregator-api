@@ -1,0 +1,1302 @@
+---
+sidebar_position: 5
+title: "Kotlin Examples"
+description: "Complete Kotlin code examples for Android, JVM, and server-side applications"
+---
+
+# Kotlin Examples
+
+Complete, production-ready code examples for integrating Kixago API in Kotlin applications. **Perfect for Android apps and backend services!** 🤖
+
+---
+
+## Quick Start
+
+### Installation (Gradle)
+
+```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("jvm") version "1.9.22"
+    kotlin("plugin.serialization") version "1.9.22"
+}
+
+dependencies {
+    // HTTP Client
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7") // CIO engine
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    implementation("io.ktor:ktor-client-logging:2.3.7")
+    
+    // JSON Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
+    // DateTime
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+    
+    // Logging
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+    
+    // Optional: Caching
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    
+    // Optional: Result type
+    implementation("com.michael-bull.kotlin-result:kotlin-result:1.1.18")
+    
+    // Testing
+    testImplementation("io.ktor:ktor-client-mock:2.3.7")
+    testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
+    testImplementation("io.kotest:kotest-assertions-core:5.8.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+}
+```
+
+### Installation (Maven)
+
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <!-- Ktor Client -->
+    <dependency>
+        <groupId>io.ktor</groupId>
+        <artifactId>ktor-client-core-jvm</artifactId>
+        <version>2.3.7</version>
+    </dependency>
+    <dependency>
+        <groupId>io.ktor</groupId>
+        <artifactId>ktor-client-cio-jvm</artifactId>
+        <version>2.3.7</version>
+    </dependency>
+    
+    <!-- Kotlinx Serialization -->
+    <dependency>
+        <groupId>org.jetbrains.kotlinx</groupId>
+        <artifactId>kotlinx-serialization-json</artifactId>
+        <version>1.6.2</version>
+    </dependency>
+    
+    <!-- Coroutines -->
+    <dependency>
+        <groupId>org.jetbrains.kotlinx</groupId>
+        <artifactId>kotlinx-coroutines-core</artifactId>
+        <version>1.7.3</version>
+    </dependency>
+</dependencies>
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request
+
+```kotlin
+// Main.kt
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@Serializable
+data class DeFiScore(
+    @SerialName("defi_score") val defiScore: Int,
+    @SerialName("risk_level") val riskLevel: String,
+    @SerialName("risk_category") val riskCategory: String
+)
+
+@Serializable
+data class RiskProfile(
+    @SerialName("wallet_address") val walletAddress: String,
+    @SerialName("total_collateral_usd") val totalCollateralUsd: Double,
+    @SerialName("total_borrowed_usd") val totalBorrowedUsd: Double,
+    @SerialName("global_health_factor") val globalHealthFactor: Double,
+    @SerialName("global_ltv") val globalLtv: Double,
+    @SerialName("defi_score") val defiScore: DeFiScore? = null
+)
+
+suspend fun getRiskProfile(walletAddress: String, apiKey: String): RiskProfile {
+    val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
+        }
+    }
+    
+    return try {
+        client.get("https://api.kixago.com/v1/risk-profile/$walletAddress") {
+            header("X-API-Key", apiKey)
+            header("Accept", "application/json")
+        }.body()
+    } finally {
+        client.close()
+    }
+}
+
+fun main() = runBlocking {
+    val apiKey = System.getenv("KIXAGO_API_KEY") ?: error("KIXAGO_API_KEY not set")
+    val walletAddress = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+    
+    val profile = getRiskProfile(walletAddress, apiKey)
+    
+    profile.defiScore?.let { score ->
+        println("DeFi Score: ${score.defiScore}")
+        println("Risk Level: ${score.riskLevel}")
+    }
+    println("Health Factor: %.2f".format(profile.globalHealthFactor))
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```kotlin
+// Models.kt
+import kotlinx.datetime.Instant
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class TokenDetail(
+    val token: String,
+    val amount: Double,
+    @SerialName("usd_value") val usdValue: Double,
+    @SerialName("token_address") val tokenAddress: String
+)
+
+@Serializable
+data class LendingPosition(
+    val protocol: String,
+    @SerialName("protocol_version") val protocolVersion: String,
+    val chain: String,
+    @SerialName("user_address") val userAddress: String,
+    @SerialName("collateral_usd") val collateralUsd: Double,
+    @SerialName("borrowed_usd") val borrowedUsd: Double,
+    @SerialName("health_factor") val healthFactor: Double,
+    @SerialName("ltv_current") val ltvCurrent: Double,
+    @SerialName("is_at_risk") val isAtRisk: Boolean,
+    @SerialName("collateral_details") val collateralDetails: List<TokenDetail>? = null,
+    @SerialName("borrowed_details") val borrowedDetails: List<TokenDetail>? = null,
+    @SerialName("last_updated") val lastUpdated: Instant
+)
+
+@Serializable
+data class ComponentScore(
+    @SerialName("component_score") val componentScore: Double,
+    val weight: Double,
+    @SerialName("weighted_contribution") val weightedContribution: Double,
+    val reasoning: String
+)
+
+@Serializable
+data class ScoreBreakdown(
+    @SerialName("health_factor_score") val healthFactorScore: ComponentScore,
+    @SerialName("leverage_score") val leverageScore: ComponentScore,
+    @SerialName("diversification_score") val diversificationScore: ComponentScore,
+    @SerialName("volatility_score") val volatilityScore: ComponentScore,
+    @SerialName("protocol_risk_score") val protocolRiskScore: ComponentScore,
+    @SerialName("total_internal_score") val totalInternalScore: Double
+)
+
+@Serializable
+data class RiskFactor(
+    val severity: String,
+    val factor: String,
+    val description: String,
+    @SerialName("impact_on_score") val impactOnScore: Int
+)
+
+@Serializable
+data class Recommendations(
+    val immediate: List<String>,
+    @SerialName("short_term") val shortTerm: List<String>,
+    @SerialName("long_term") val longTerm: List<String>
+)
+
+@Serializable
+data class LiquidationScenario(
+    val event: String,
+    @SerialName("new_health_factor") val newHealthFactor: Double,
+    val status: String,
+    @SerialName("time_estimate") val timeEstimate: String? = null,
+    @SerialName("estimated_loss") val estimatedLoss: String? = null
+)
+
+@Serializable
+data class LiquidationSimulation(
+    @SerialName("current_health_factor") val currentHealthFactor: Double,
+    @SerialName("liquidation_threshold") val liquidationThreshold: Double,
+    @SerialName("buffer_percentage") val bufferPercentage: Double,
+    val scenarios: List<LiquidationScenario>
+)
+
+@Serializable
+data class DeFiScore(
+    @SerialName("defi_score") val defiScore: Int,
+    @SerialName("risk_level") val riskLevel: String,
+    @SerialName("risk_category") val riskCategory: String,
+    val color: String,
+    @SerialName("score_breakdown") val scoreBreakdown: ScoreBreakdown,
+    @SerialName("risk_factors") val riskFactors: List<RiskFactor>,
+    val recommendations: Recommendations,
+    @SerialName("liquidation_simulation") val liquidationSimulation: LiquidationSimulation,
+    @SerialName("calculated_at") val calculatedAt: Instant
+)
+
+@Serializable
+data class RiskProfileResponse(
+    @SerialName("wallet_address") val walletAddress: String,
+    @SerialName("total_collateral_usd") val totalCollateralUsd: Double,
+    @SerialName("total_borrowed_usd") val totalBorrowedUsd: Double,
+    @SerialName("global_health_factor") val globalHealthFactor: Double,
+    @SerialName("global_ltv") val globalLtv: Double,
+    @SerialName("positions_at_risk_count") val positionsAtRiskCount: Int,
+    @SerialName("last_updated") val lastUpdated: Instant,
+    @SerialName("aggregation_duration") val aggregationDuration: String,
+    @SerialName("lending_positions") val lendingPositions: List<LendingPosition>,
+    @SerialName("defi_score") val defiScore: DeFiScore? = null,
+    @SerialName("aggregation_errors") val aggregationErrors: Map<String, String>? = null
+) {
+    // Helper properties and functions
+    val hasPositionsAtRisk: Boolean
+        get() = positionsAtRiskCount > 0
+    
+    fun positionsForChain(chain: String): List<LendingPosition> =
+        lendingPositions.filter { it.chain == chain }
+    
+    fun collateralForProtocol(protocol: String): Double =
+        lendingPositions
+            .filter { it.protocol == protocol }
+            .sumOf { it.collateralUsd }
+}
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```kotlin
+// KixagoError.kt
+sealed class KixagoError(message: String) : Exception(message) {
+    data class InvalidAddress(val address: String) : 
+        KixagoError("Invalid wallet address: $address")
+    
+    object Unauthorized : 
+        KixagoError("Invalid API key")
+    
+    data class RateLimited(val retryAfter: Int) : 
+        KixagoError("Rate limit exceeded - retry after ${retryAfter}s")
+    
+    data class ServerError(val msg: String) : 
+        KixagoError("Server error: $msg")
+    
+    data class ApiError(val status: Int, val msg: String) : 
+        KixagoError("API error $status: $msg")
+    
+    data class NetworkError(override val cause: Throwable) : 
+        KixagoError("Network error: ${cause.message}")
+}
+
+// KixagoClient.kt
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
+import mu.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
+
+class KixagoClient(
+    private val apiKey: String,
+    private val baseUrl: String = "https://api.kixago.com"
+) {
+    private val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+                prettyPrint = true
+            })
+        }
+        
+        install(Logging) {
+            level = LogLevel.INFO
+            logger = Logger.DEFAULT
+        }
+        
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 30_000
+        }
+        
+        defaultRequest {
+            header("X-API-Key", apiKey)
+            header("Accept", "application/json")
+        }
+    }
+    
+    /**
+     * Get risk profile for a wallet address
+     */
+    suspend fun getRiskProfile(walletAddress: String): RiskProfileResponse {
+        require(walletAddress.isNotBlank()) {
+            throw KixagoError.InvalidAddress("Address cannot be empty")
+        }
+        
+        logger.info { "Fetching risk profile for $walletAddress" }
+        
+        return try {
+            val response = client.get("$baseUrl/v1/risk-profile/$walletAddress")
+            handleResponse(response)
+        } catch (e: KixagoError) {
+            throw e
+        } catch (e: Exception) {
+            throw KixagoError.NetworkError(e)
+        }
+    }
+    
+    private suspend fun handleResponse(response: HttpResponse): RiskProfileResponse {
+        return when (response.status) {
+            HttpStatusCode.OK -> {
+                val profile: RiskProfileResponse = response.body()
+                
+                // Warn about partial failures
+                profile.aggregationErrors?.takeIf { it.isNotEmpty() }?.let { errors ->
+                    logger.warn { "⚠️ Partial failure: ${errors.keys}" }
+                }
+                
+                profile
+            }
+            
+            HttpStatusCode.BadRequest -> {
+                val error = response.body<Map<String, String>>()
+                throw KixagoError.InvalidAddress(
+                    error["error"] ?: "Invalid request"
+                )
+            }
+            
+            HttpStatusCode.Unauthorized -> {
+                throw KixagoError.Unauthorized
+            }
+            
+            HttpStatusCode.TooManyRequests -> {
+                val retryAfter = response.headers["Retry-After"]?.toIntOrNull() ?: 5
+                throw KixagoError.RateLimited(retryAfter)
+            }
+            
+            HttpStatusCode.InternalServerError -> {
+                throw KixagoError.ServerError("Internal server error")
+            }
+            
+            else -> {
+                val error = runCatching { 
+                    response.body<Map<String, String>>() 
+                }.getOrNull()
+                
+                throw KixagoError.ApiError(
+                    status = response.status.value,
+                    msg = error?.get("error") ?: "Unknown error"
+                )
+            }
+        }
+    }
+    
+    fun close() {
+        client.close()
+    }
+}
+
+// Usage
+suspend fun main() {
+    val apiKey = System.getenv("KIXAGO_API_KEY") ?: error("API key required")
+    val client = KixagoClient(apiKey)
+    
+    try {
+        val profile = client.getRiskProfile(
+            "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+        )
+        
+        profile.defiScore?.let { score ->
+            println("DeFi Score: ${score.defiScore}")
+            println("Risk Level: ${score.riskLevel}")
+        }
+        println("Health Factor: %.2f".format(profile.globalHealthFactor))
+        
+    } catch (e: KixagoError) {
+        println("Error: ${e.message}")
+    } finally {
+        client.close()
+    }
+}
+```
+
+---
+
+## Caching Implementation
+
+### Example 4: Caffeine Cache
+
+```kotlin
+// CachedKixagoClient.kt
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import mu.KotlinLogging
+import java.util.concurrent.TimeUnit
+
+private val logger = KotlinLogging.logger {}
+
+class CachedKixagoClient(
+    apiKey: String,
+    baseUrl: String = "https://api.kixago.com",
+    cacheTtlSeconds: Long = 30
+) {
+    private val client = KixagoClient(apiKey, baseUrl)
+    
+    private val cache: Cache<String, RiskProfileResponse> = Caffeine.newBuilder()
+        .expireAfterWrite(cacheTtlSeconds, TimeUnit.SECONDS)
+        .maximumSize(1000)
+        .build()
+    
+    private val fetchMutexes = mutableMapOf<String, Mutex>()
+    private val mutexLock = Mutex()
+    
+    suspend fun getRiskProfile(walletAddress: String): RiskProfileResponse {
+        // Check cache first
+        cache.getIfPresent(walletAddress)?.let { cached ->
+            logger.info { "✅ Cache HIT for $walletAddress" }
+            return cached
+        }
+        
+        logger.info { "❌ Cache MISS for $walletAddress" }
+        
+        // Ensure only one request per wallet at a time (prevents stampede)
+        val mutex = mutexLock.withLock {
+            fetchMutexes.getOrPut(walletAddress) { Mutex() }
+        }
+        
+        return mutex.withLock {
+            // Double-check cache (another coroutine might have fetched it)
+            cache.getIfPresent(walletAddress)?.let { return it }
+            
+            // Fetch from API
+            val profile = client.getRiskProfile(walletAddress)
+            
+            // Cache the result
+            cache.put(walletAddress, profile)
+            
+            // Clean up mutex
+            mutexLock.withLock {
+                fetchMutexes.remove(walletAddress)
+            }
+            
+            profile
+        }
+    }
+    
+    fun invalidate(walletAddress: String) {
+        cache.invalidate(walletAddress)
+    }
+    
+    fun invalidateAll() {
+        cache.invalidateAll()
+    }
+    
+    fun close() {
+        client.close()
+    }
+}
+
+// Usage
+suspend fun main() {
+    val client = CachedKixagoClient(
+        apiKey = System.getenv("KIXAGO_API_KEY") ?: error("API key required")
+    )
+    
+    try {
+        // First call - cache miss
+        val profile1 = client.getRiskProfile("0xf0bb...")
+        
+        // Second call within 30 seconds - cache hit
+        val profile2 = client.getRiskProfile("0xf0bb...")
+        
+    } finally {
+        client.close()
+    }
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 5: Credit Underwriting Service
+
+```kotlin
+// UnderwritingService.kt
+import mu.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
+
+enum class Decision {
+    APPROVED,
+    DECLINED,
+    MANUAL_REVIEW
+}
+
+data class UnderwritingDecision(
+    val decision: Decision,
+    val reason: String,
+    val defiScore: Int? = null,
+    val riskCategory: String? = null,
+    val maxLoanAmount: Double? = null,
+    val conditions: List<String> = emptyList()
+) {
+    companion object {
+        fun approved(
+            reason: String,
+            score: Int,
+            category: String,
+            maxLoan: Double
+        ) = UnderwritingDecision(
+            decision = Decision.APPROVED,
+            reason = reason,
+            defiScore = score,
+            riskCategory = category,
+            maxLoanAmount = maxLoan
+        )
+        
+        fun declined(reason: String, score: Int? = null) = UnderwritingDecision(
+            decision = Decision.DECLINED,
+            reason = reason,
+            defiScore = score
+        )
+        
+        fun manualReview(
+            reason: String,
+            score: Int? = null,
+            conditions: List<String> = emptyList()
+        ) = UnderwritingDecision(
+            decision = Decision.MANUAL_REVIEW,
+            reason = reason,
+            defiScore = score,
+            conditions = conditions
+        )
+    }
+}
+
+class UnderwritingService(private val client: KixagoClient) {
+    
+    suspend fun underwrite(
+        walletAddress: String,
+        requestedLoanAmount: Double
+    ): UnderwritingDecision {
+        // Fetch DeFi profile
+        val profile = try {
+            client.getRiskProfile(walletAddress)
+        } catch (e: KixagoError) {
+            logger.error(e) { "Error fetching profile" }
+            return UnderwritingDecision.manualReview(
+                reason = "Error fetching DeFi profile - manual review required"
+            )
+        }
+        
+        // Check if wallet has DeFi history
+        val defiScore = profile.defiScore ?: return UnderwritingDecision.declined(
+            reason = "No DeFi lending history found"
+        )
+        
+        val score = defiScore.defiScore
+        val riskCategory = defiScore.riskCategory
+        val healthFactor = profile.globalHealthFactor
+        val collateral = profile.totalCollateralUsd
+        
+        // Rule 1: Minimum credit score
+        if (score < 550) {
+            return UnderwritingDecision.declined(
+                reason = "DeFi credit score too low: $score",
+                score = score
+            )
+        }
+        
+        // Rule 2: Health factor requirement
+        if (healthFactor > 0 && healthFactor < 1.5) {
+            return UnderwritingDecision.declined(
+                reason = "Health factor too low: %.2f (minimum 1.5)".format(healthFactor),
+                score = score
+            )
+        }
+        
+        // Rule 3: Collateral requirement (2x loan amount)
+        val minCollateral = requestedLoanAmount * 2
+        if (collateral < minCollateral) {
+            return UnderwritingDecision.declined(
+                reason = "Insufficient collateral. Need $%.0f, have $%.0f"
+                    .format(minCollateral, collateral),
+                score = score
+            )
+        }
+        
+        // Rule 4: Risk category checks
+        when (riskCategory) {
+            "URGENT_ACTION_REQUIRED" -> {
+                return UnderwritingDecision.declined(
+                    reason = "Critical risk factors detected - imminent liquidation risk",
+                    score = score
+                )
+            }
+            
+            "HIGH_RISK" -> {
+                return UnderwritingDecision.manualReview(
+                    reason = "High risk category - requires underwriter review",
+                    score = score,
+                    conditions = defiScore.recommendations.immediate
+                )
+            }
+        }
+        
+        // Calculate max loan amount (50% of collateral)
+        val maxLoan = collateral * 0.5
+        
+        if (requestedLoanAmount > maxLoan) {
+            return UnderwritingDecision.manualReview(
+                reason = "Requested amount exceeds max (50% of collateral)",
+                score = score
+            )
+        }
+        
+        // APPROVED!
+        return UnderwritingDecision.approved(
+            reason = "Strong DeFi profile - Score $score, Risk: $riskCategory",
+            score = score,
+            category = riskCategory,
+            maxLoan = maxLoan
+        )
+    }
+}
+
+// Usage
+suspend fun main() {
+    val apiKey = System.getenv("KIXAGO_API_KEY") ?: error("API key required")
+    val client = KixagoClient(apiKey)
+    val service = UnderwritingService(client)
+    
+    try {
+        val decision = service.underwrite(
+            walletAddress = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+            requestedLoanAmount = 500_000.0
+        )
+        
+        println("Decision: ${decision.decision}")
+        println("Reason: ${decision.reason}")
+        
+        decision.maxLoanAmount?.let { maxLoan ->
+            println("Max Loan Amount: $%.0f".format(maxLoan))
+        }
+        
+    } finally {
+        client.close()
+    }
+}
+```
+
+---
+
+### Example 6: Android ViewModel with Jetpack Compose
+
+```kotlin
+// RiskProfileViewModel.kt
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+sealed interface RiskProfileUiState {
+    object Idle : RiskProfileUiState
+    object Loading : RiskProfileUiState
+    data class Success(val profile: RiskProfileResponse) : RiskProfileUiState
+    data class Error(val message: String) : RiskProfileUiState
+}
+
+class RiskProfileViewModel(
+    private val client: KixagoClient
+) : ViewModel() {
+    
+    private val _uiState = MutableStateFlow<RiskProfileUiState>(RiskProfileUiState.Idle)
+    val uiState: StateFlow<RiskProfileUiState> = _uiState.asStateFlow()
+    
+    fun loadProfile(walletAddress: String) {
+        viewModelScope.launch {
+            _uiState.value = RiskProfileUiState.Loading
+            
+            _uiState.value = try {
+                val profile = client.getRiskProfile(walletAddress)
+                RiskProfileUiState.Success(profile)
+            } catch (e: KixagoError) {
+                RiskProfileUiState.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        client.close()
+    }
+}
+
+// RiskProfileScreen.kt (Jetpack Compose)
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun RiskProfileScreen(viewModel: RiskProfileViewModel) {
+    var walletAddress by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsState()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "DeFi Credit Score",
+            style = MaterialTheme.typography.headlineLarge
+        )
+        
+        OutlinedTextField(
+            value = walletAddress,
+            onValueChange = { walletAddress = it },
+            label = { Text("Wallet Address or ENS") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        
+        Button(
+            onClick = { viewModel.loadProfile(walletAddress) },
+            enabled = walletAddress.isNotBlank() && uiState !is RiskProfileUiState.Loading
+        ) {
+            Text("Check Credit Score")
+        }
+        
+        when (val state = uiState) {
+            is RiskProfileUiState.Idle -> {
+                // Show nothing
+            }
+            
+            is RiskProfileUiState.Loading -> {
+                CircularProgressIndicator()
+                Text("Analyzing DeFi positions...")
+            }
+            
+            is RiskProfileUiState.Error -> {
+                Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            
+            is RiskProfileUiState.Success -> {
+                ProfileCard(profile = state.profile)
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileCard(profile: RiskProfileResponse) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Credit Score
+            profile.defiScore?.let { score ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = score.defiScore.toString(),
+                        style = MaterialTheme.typography.displayLarge,
+                        color = colorForScore(score.color)
+                    )
+                    
+                    Column {
+                        Text(
+                            text = score.riskLevel,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = score.riskCategory,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            HorizontalDivider()
+            
+            // Portfolio Stats
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatColumn(
+                    label = "Collateral",
+                    value = "$${formatNumber(profile.totalCollateralUsd)}"
+                )
+                StatColumn(
+                    label = "Debt",
+                    value = "$${formatNumber(profile.totalBorrowedUsd)}"
+                )
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatColumn(
+                    label = "Health Factor",
+                    value = "%.2f".format(profile.globalHealthFactor),
+                    valueColor = healthFactorColor(profile.globalHealthFactor)
+                )
+                StatColumn(
+                    label = "LTV",
+                    value = "%.1f%%".format(profile.globalLtv)
+                )
+            }
+            
+            // Recommendations
+            profile.defiScore?.recommendations?.immediate?.takeIf { it.isNotEmpty() }?.let { actions ->
+                HorizontalDivider()
+                
+                Text(
+                    text = "⚠️ Immediate Actions",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                actions.forEach { action ->
+                    Text(
+                        text = "• $action",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatColumn(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = valueColor
+        )
+    }
+}
+
+fun formatNumber(value: Double): String {
+    return when {
+        value >= 1_000_000_000 -> "%.1fB".format(value / 1_000_000_000)
+        value >= 1_000_000 -> "%.1fM".format(value / 1_000_000)
+        value >= 1_000 -> "%.1fK".format(value / 1_000)
+        else -> "%.0f".format(value)
+    }
+}
+
+fun colorForScore(colorName: String): Color = when (colorName) {
+    "green" -> Color(0xFF4CAF50)
+    "blue" -> Color(0xFF2196F3)
+    "yellow" -> Color(0xFFFFC107)
+    "orange" -> Color(0xFFFF9800)
+    "red" -> Color(0xFFF44336)
+    else -> Color.Unspecified
+}
+
+fun healthFactorColor(hf: Double): Color = when {
+    hf >= 2.0 -> Color(0xFF4CAF50)
+    hf >= 1.5 -> Color(0xFF2196F3)
+    hf >= 1.2 -> Color(0xFFFFC107)
+    hf >= 1.0 -> Color(0xFFFF9800)
+    else -> Color(0xFFF44336)
+}
+```
+
+---
+
+## Concurrent Processing
+
+### Example 7: Batch Fetching with Coroutines
+
+```kotlin
+// BatchProcessor.kt
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+
+class BatchProcessor(private val client: KixagoClient) {
+    
+    suspend fun getMultipleProfiles(
+        walletAddresses: List<String>
+    ): Map<String, Result<RiskProfileResponse>> = coroutineScope {
+        walletAddresses.map { address ->
+            async {
+                address to runCatching {
+                    client.getRiskProfile(address)
+                }
+            }
+        }.awaitAll().toMap()
+    }
+}
+
+// Usage
+suspend fun main() {
+    val apiKey = System.getenv("KIXAGO_API_KEY") ?: error("API key required")
+    val client = KixagoClient(apiKey)
+    val batch = BatchProcessor(client)
+    
+    try {
+        val wallets = listOf(
+            "0xWallet1...",
+            "0xWallet2...",
+            "0xWallet3..."
+        )
+        
+        val results = batch.getMultipleProfiles(wallets)
+        
+        results.forEach { (wallet, result) ->
+            result.fold(
+                onSuccess = { profile ->
+                    val score = profile.defiScore?.defiScore ?: 0
+                    println("✅ $wallet: Score $score")
+                },
+                onFailure = { error ->
+                    println("❌ $wallet: ${error.message}")
+                }
+            )
+        }
+        
+    } finally {
+        client.close()
+    }
+}
+```
+
+---
+
+## Testing
+
+### Example 8: Unit Tests with Kotest
+
+```kotlin
+// KixagoClientTest.kt
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
+
+class KixagoClientTest : StringSpec({
+    
+    "getRiskProfile should return profile on success" {
+        val mockEngine = MockEngine { request ->
+            respond(
+                content = """
+                    {
+                        "wallet_address": "0xTest123",
+                        "total_collateral_usd": 100000.0,
+                        "total_borrowed_usd": 30000.0,
+                        "global_health_factor": 3.2,
+                        "global_ltv": 30.0,
+                        "positions_at_risk_count": 0,
+                        "last_updated": "2025-01-15T12:00:00Z",
+                        "aggregation_duration": "1.234s",
+                        "lending_positions": [],
+                        "defi_score": {
+                            "defi_score": 750,
+                            "risk_level": "Very Low Risk",
+                            "risk_category": "VERY_LOW_RISK",
+                            "color": "green",
+                            "score_breakdown": {
+                                "health_factor_score": {"component_score": 100, "weight": 0.4, "weighted_contribution": 40, "reasoning": ""},
+                                "leverage_score": {"component_score": 100, "weight": 0.3, "weighted_contribution": 30, "reasoning": ""},
+                                "diversification_score": {"component_score": 20, "weight": 0.15, "weighted_contribution": 3, "reasoning": ""},
+                                "volatility_score": {"component_score": 100, "weight": 0.1, "weighted_contribution": 10, "reasoning": ""},
+                                "protocol_risk_score": {"component_score": 95, "weight": 0.05, "weighted_contribution": 4.75, "reasoning": ""},
+                                "total_internal_score": 87.75
+                            },
+                            "risk_factors": [],
+                            "recommendations": {
+                                "immediate": [],
+                                "short_term": [],
+                                "long_term": []
+                            },
+                            "liquidation_simulation": {
+                                "current_health_factor": 3.2,
+                                "liquidation_threshold": 1.0,
+                                "buffer_percentage": 220.0,
+                                "scenarios": []
+                            },
+                            "calculated_at": "2025-01-15T12:00:00Z"
+                        }
+                    }
+                """.trimIndent(),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        
+        val mockClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+        
+        val client = KixagoClient("test-key", mockHttpClient = mockClient)
+        
+        val profile = client.getRiskProfile("0xTest123")
+        
+        profile.walletAddress shouldBe "0xTest123"
+        profile.defiScore?.defiScore shouldBe 750
+        profile.globalHealthFactor shouldBe 3.2
+    }
+    
+    "getRiskProfile should throw Unauthorized on 401" {
+        val mockEngine = MockEngine { request ->
+            respond(
+                content = """{"error": "Invalid API key"}""",
+                status = HttpStatusCode.Unauthorized,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        
+        val mockClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+        
+        val client = KixagoClient("bad-key", mockHttpClient = mockClient)
+        
+        runCatching {
+            client.getRiskProfile("0xTest123")
+        }.exceptionOrNull().shouldBeInstanceOf<KixagoError.Unauthorized>()
+    }
+    
+    "RiskProfileResponse helper methods should work" {
+        val profile = RiskProfileResponse(
+            walletAddress = "0xTest",
+            totalCollateralUsd = 100000.0,
+            totalBorrowedUsd = 30000.0,
+            globalHealthFactor = 3.2,
+            globalLtv = 30.0,
+            positionsAtRiskCount = 1,
+            lastUpdated = kotlinx.datetime.Clock.System.now(),
+            aggregationDuration = "1s",
+            lendingPositions = listOf(
+                LendingPosition(
+                    protocol = "Aave",
+                    protocolVersion = "V3",
+                    chain = "Ethereum",
+                    userAddress = "0xTest",
+                    collateralUsd = 100000.0,
+                    borrowedUsd = 30000.0,
+                    healthFactor = 3.2,
+                    ltvCurrent = 30.0,
+                    isAtRisk = false,
+                    collateralDetails = null,
+                    borrowedDetails = null,
+                    lastUpdated = kotlinx.datetime.Clock.System.now()
+                )
+            ),
+            defiScore = null,
+            aggregationErrors = null
+        )
+        
+        profile.hasPositionsAtRisk shouldBe true
+        profile.positionsForChain("Ethereum").size shouldBe 1
+        profile.collateralForProtocol("Aave") shouldBe 100000.0
+    }
+})
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use Coroutines for async** - Structured concurrency with `suspend` functions
+- **Use Data Classes** - Immutable, auto-generated `equals()`, `hashCode()`, `toString()`
+- **Use Sealed Classes for errors** - Type-safe error handling
+- **Leverage null safety** - Use `?`, `?.`, `?:`, `!!` appropriately
+- **Use Extension Functions** - Add helper methods to existing types
+- **Use Kotlin Serialization** - Type-safe, efficient JSON parsing
+- **Use StateFlow/Flow** - Reactive state management
+- **Use `runCatching`** - Functional error handling
+- **Handle partial failures** - Check `aggregationErrors` field
+
+### ❌ DON'T
+
+- **Don't block coroutines** - Use `withContext(Dispatchers.IO)` for blocking calls
+- **Don't use `!!` in production** - Handle nulls safely with `?.` or `?:`
+- **Don't ignore exceptions** - Wrap in `try-catch` or `runCatching`
+- **Don't use `Double` for precise values** - Consider `BigDecimal` for money
+- **Don't expose API keys** - Use BuildConfig or environment variables
+- **Don't create new client per request** - Reuse HttpClient
+- **Don't skip cancellation checks** - Respect `CoroutineScope` lifecycle
+
+---
+
+## Performance Tips
+
+### HttpClient Configuration
+
+```kotlin
+val client = HttpClient(CIO) {
+    engine {
+        maxConnectionsCount = 100
+        endpoint {
+            maxConnectionsPerRoute = 20
+            keepAliveTime = 5000
+            connectTimeout = 10000
+            connectAttempts = 3
+        }
+    }
+}
+```
+
+### Efficient Deserialization
+
+```kotlin
+// Decode only what you need
+@Serializable
+data class MinimalProfile(
+    @SerialName("wallet_address") val walletAddress: String,
+    @SerialName("defi_score") val defiScore: MinimalScore? = null
+)
+
+@Serializable
+data class MinimalScore(
+    @SerialName("defi_score") val score: Int
+)
+```
+
+### Connection Pooling
+
+```kotlin
+// Reuse the same HttpClient instance
+object KixagoClientFactory {
+    private lateinit var client: KixagoClient
+    
+    fun getInstance(apiKey: String): KixagoClient {
+        if (!::client.isInitialized) {
+            client = KixagoClient(apiKey)
+        }
+        return client
+    }
+}
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/java" className="button button--primary button--lg">
+    ☕ Java Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Kotlin SDK?** Coming Q2 2025 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+- **Android-specific issues?** Check our [Android Integration Guide](/guides/android-integration)
+
+---
+
+## Why Kotlin for DeFi?
+
+Kotlin is **the premier language for modern JVM and Android development** because:
+
+- 🤖 **Official Android language** - 100% Google-backed
+- ⚡ **Concise & expressive** - 40% less code than Java
+- 🔒 **Null safety** - Eliminates NPEs at compile time
+- 🌊 **Coroutines** - Simple, powerful async/await
+- 🎯 **Data classes** - Boilerplate-free models
+- 🔀 **Sealed classes** - Type-safe error handling
+- 🏗️ **100% Java interop** - Use any Java library
+- 🌐 **Multiplatform** - Share code between Android, iOS, JVM, JS
+
+**Popular crypto projects using Kotlin:**
+- Trust Wallet (Android)
+- Coinbase Wallet (Android)
+- Kraken Mobile
+- Uniswap Mobile
+- Phantom Wallet (Android)
+---
+
+© 2025 Kixago, Inc. All rights reserved.
+```

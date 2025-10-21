@@ -1,0 +1,532 @@
+---
+sidebar_position: 3
+title: "Authentication"
+description: "How to authenticate with the Kixago API"
+---
+
+# Authentication
+
+All Kixago API endpoints (except `/health`) require authentication using an API key.
+
+---
+
+## Getting Your API Key
+
+1. Visit [https://kixago.com/dashboard](https://kixago.com/dashboard)
+2. Sign up for a free account
+3. Navigate to **API Keys** section
+4. Click **Create New Key**
+5. Copy your key immediately (it's only shown once)
+
+Your API key will look like this:
+
+```
+kixakey_7eBHF9Ndxd_7eBHF9Ndxdq-I3q4Ds4nULLPQd-vElx9KC8fa6NDZiw
+```
+
+:::danger Never Expose Your API Key
+- ❌ Never commit API keys to version control (Git, SVN, etc.)
+- ❌ Never hardcode keys in client-side JavaScript
+- ❌ Never share keys in screenshots, logs, or error messages
+- ✅ Store keys in environment variables or secret managers
+- ✅ Use different keys for development and production
+- ✅ Rotate keys periodically (every 90 days recommended)
+:::
+
+---
+
+## Authentication Methods
+
+Kixago supports **3 authentication methods**. Choose the one that fits your use case.
+
+---
+
+## Method 1: `X-API-Key` Header (Recommended)
+
+**This is the primary authentication method** used in production.
+
+### Request Example
+
+```bash
+curl -H "X-API-Key: kixakey_your_key_here" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+### When to Use
+
+✅ **Production applications**  
+✅ **Server-side integrations**  
+✅ **Automated scripts**  
+✅ **Any secure environment**
+
+### Code Examples
+
+#### JavaScript/TypeScript
+
+```javascript
+const KIXAGO_API_KEY = process.env.KIXAGO_API_KEY;
+
+const response = await fetch(
+  'https://api.kixago.com/v1/risk-profile/0x...',
+  {
+    headers: {
+      'X-API-Key': KIXAGO_API_KEY
+    }
+  }
+);
+```
+
+#### Python
+
+```python
+import os
+import requests
+
+KIXAGO_API_KEY = os.getenv('KIXAGO_API_KEY')
+
+response = requests.get(
+    'https://api.kixago.com/v1/risk-profile/0x...',
+    headers={'X-API-Key': KIXAGO_API_KEY}
+)
+```
+
+#### Go
+
+```go
+apiKey := os.Getenv("KIXAGO_API_KEY")
+
+req, _ := http.NewRequest("GET", "https://api.kixago.com/v1/risk-profile/0x...", nil)
+req.Header.Set("X-API-Key", apiKey)
+
+client := &http.Client{}
+resp, _ := client.Do(req)
+```
+
+---
+
+## Method 2: `Authorization: Bearer` Header (OAuth-Ready)
+
+If you're preparing for OAuth 2.0 integration or prefer standard Bearer tokens.
+
+### Request Example
+
+```bash
+curl -H "Authorization: Bearer kixakey_your_key_here" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+### When to Use
+
+✅ **OAuth 2.0 workflows** (future Zitadel integration)  
+✅ **Enterprise applications** with existing Bearer token infrastructure  
+✅ **Microservices** that standardize on `Authorization` headers
+
+### Code Examples
+
+#### JavaScript/TypeScript
+
+```javascript
+const response = await fetch(
+  'https://api.kixago.com/v1/risk-profile/0x...',
+  {
+    headers: {
+      'Authorization': `Bearer ${process.env.KIXAGO_API_KEY}`
+    }
+  }
+);
+```
+
+#### Python
+
+```python
+response = requests.get(
+    'https://api.kixago.com/v1/risk-profile/0x...',
+    headers={'Authorization': f'Bearer {os.getenv("KIXAGO_API_KEY")}'}
+)
+```
+
+#### Go
+
+```go
+req.Header.Set("Authorization", "Bearer "+os.Getenv("KIXAGO_API_KEY"))
+```
+
+---
+
+## Method 3: Query Parameter (Testing Only)
+
+**⚠️ For quick browser testing only. NOT recommended for production.**
+
+### Request Example
+
+```bash
+curl "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C?api-key=kixakey_your_key_here"
+```
+
+### When to Use
+
+✅ **Quick browser testing** (paste URL in address bar)  
+✅ **Debugging** (temporary troubleshooting)  
+❌ **Never in production**
+
+:::danger Security Risk
+API keys in URLs can be:
+- Logged in server access logs
+- Cached by browsers and proxies
+- Exposed in browser history
+- Leaked via `Referer` headers
+- Visible in screenshots
+
+**Always use header-based authentication in production.**
+:::
+
+---
+
+## Checking Authentication Status
+
+### Successful Authentication
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: valid_key" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "wallet_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "total_collateral_usd": 2139957718.47,
+  "defi_score": { ... }
+}
+```
+
+---
+
+### Failed Authentication
+
+**Request:**
+
+```bash
+curl "https://api.kixago.com/v1/risk-profile/0xf0bb..."
+# (no API key header)
+```
+
+**Response (401 Unauthorized):**
+
+```json
+{
+  "error": "missing or invalid API key"
+}
+```
+
+**Common causes:**
+
+- ❌ No authentication header/parameter provided
+- ❌ API key is malformed or incomplete
+- ❌ API key has been revoked
+- ❌ API key expired (if expiration was set)
+
+---
+
+## API Key Management
+
+### Storing Keys Securely
+
+#### Environment Variables (Recommended)
+
+```bash
+# .env file (never commit this!)
+KIXAGO_API_KEY=kixakey_7eBHF9Ndxd_7eBHF9Ndxdq-I3q4Ds4nULLPQd-vElx9KC8fa6NDZiw
+```
+
+Load in your application:
+
+```javascript
+// Node.js with dotenv
+require('dotenv').config();
+const apiKey = process.env.KIXAGO_API_KEY;
+```
+
+```python
+# Python with python-dotenv
+from dotenv import load_dotenv
+load_dotenv()
+
+api_key = os.getenv('KIXAGO_API_KEY')
+```
+
+#### Secret Managers (Production)
+
+For production environments, use a secret manager:
+
+- **AWS Secrets Manager**
+- **Google Cloud Secret Manager**
+- **Azure Key Vault**
+- **HashiCorp Vault**
+- **Doppler**
+- **1Password Secrets Automation**
+
+Example with AWS Secrets Manager:
+
+```javascript
+const AWS = require('aws-sdk');
+const secretsManager = new AWS.SecretsManager();
+
+const secret = await secretsManager.getSecretValue({
+  SecretId: 'kixago/api-key'
+}).promise();
+
+const apiKey = JSON.parse(secret.SecretString).KIXAGO_API_KEY;
+```
+
+---
+
+### Key Rotation
+
+**Best practice:** Rotate API keys every 90 days.
+
+**Steps:**
+
+1. Create a new API key in the dashboard
+2. Update your environment variables/secrets
+3. Deploy the updated configuration
+4. Verify the new key works
+5. Revoke the old key
+
+**During rotation:**
+
+```bash
+# Old key (still active)
+KIXAGO_API_KEY=kixakey_old_key
+
+# Create new key, test in staging
+KIXAGO_API_KEY_NEW=kixakey_new_key
+
+# After verification, promote to production
+KIXAGO_API_KEY=kixakey_new_key
+
+# Revoke old key in dashboard
+```
+
+---
+
+### Multiple Keys (Development vs Production)
+
+Create separate keys for different environments:
+
+```bash
+# .env.development
+KIXAGO_API_KEY=kixakey_dev_abc123
+
+# .env.production
+KIXAGO_API_KEY=kixakey_prod_xyz789
+```
+
+**Benefits:**
+
+- ✅ Revoke dev keys without affecting production
+- ✅ Track usage separately per environment
+- ✅ Different rate limits per environment
+- ✅ Easier debugging (know which env caused errors)
+
+---
+
+## Rate Limits
+
+API keys are subject to rate limits based on your plan:
+
+| Plan | Requests/Month | Rate Limit | Burst |
+|------|----------------|------------|-------|
+| **Developer** (Free) | 10,000 | 10 req/sec | 20 req/sec |
+| **Startup** | 100,000 | 50 req/sec | 100 req/sec |
+| **Institution** | 1,000,000 | 200 req/sec | 400 req/sec |
+| **Enterprise** | Unlimited | Custom | Custom |
+
+### Rate Limit Headers
+
+Every response includes rate limit headers:
+
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 1705334400
+```
+
+**Fields:**
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `X-RateLimit-Limit` | Max requests per second | `10` |
+| `X-RateLimit-Remaining` | Requests left in current window | `7` |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets | `1705334400` |
+
+### Handling Rate Limits
+
+**Response when rate limited (429 Too Many Requests):**
+
+```json
+{
+  "error": "rate limit exceeded",
+  "retry_after": 5
+}
+```
+
+**Retry logic example:**
+
+```javascript
+async function getRiskProfileWithRetry(address, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(
+      `https://api.kixago.com/v1/risk-profile/${address}`,
+      { headers: { 'X-API-Key': process.env.KIXAGO_API_KEY } }
+    );
+    
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After') || 5;
+      console.log(`Rate limited, retrying after ${retryAfter}s...`);
+      await sleep(retryAfter * 1000);
+      continue;
+    }
+    
+    return await response.json();
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+
+---
+
+## Security Best Practices
+
+### ✅ DO
+
+- **Store keys in environment variables** or secret managers
+- **Use HTTPS only** (never HTTP for API calls)
+- **Rotate keys every 90 days**
+- **Use different keys per environment** (dev, staging, prod)
+- **Monitor API key usage** in the dashboard
+- **Revoke compromised keys immediately**
+- **Implement retry logic** for rate limits
+- **Log authentication failures** for security monitoring
+
+### ❌ DON'T
+
+- **Never commit keys to Git** (use `.gitignore` for `.env` files)
+- **Never hardcode keys in source code**
+- **Never use query parameters in production**
+- **Never share keys in screenshots or logs**
+- **Never use the same key across all environments**
+- **Never expose keys in client-side JavaScript**
+- **Don't ignore rate limit headers**
+
+---
+
+## Troubleshooting
+
+### "missing or invalid API key"
+
+**Problem:** API key not included or malformed.
+
+**Solution:**
+
+```bash
+# ❌ Wrong - no header
+curl "https://api.kixago.com/v1/risk-profile/0x..."
+
+# ✅ Correct
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0x..."
+```
+
+---
+
+### "rate limit exceeded"
+
+**Problem:** You've exceeded your plan's rate limit.
+
+**Solution:**
+
+- Implement retry logic with exponential backoff
+- Cache responses on your side (30s minimum)
+- Upgrade to a higher plan
+- Check `X-RateLimit-*` headers to track usage
+
+---
+
+### API key works locally but not in production
+
+**Problem:** Environment variable not set in production.
+
+**Solution:**
+
+```bash
+# Verify env var is set
+echo $KIXAGO_API_KEY
+
+# Check your deployment platform's environment settings
+# Examples:
+# - Heroku: heroku config:set KIXAGO_API_KEY=...
+# - Vercel: Add to project settings > Environment Variables
+# - AWS Lambda: Set in function configuration
+# - Docker: Pass via -e flag or docker-compose.yml
+```
+
+---
+
+## Testing Authentication
+
+### Health Check (No Auth Required)
+
+```bash
+curl "https://api.kixago.com/health"
+```
+
+**Expected:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-01-15T14:30:00Z"
+}
+```
+
+---
+
+### Authenticated Endpoint Test
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+**Expected:** Full risk profile JSON (200 OK)
+
+**If you get 401:** Check that your API key is correct and active
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/endpoints/risk-profile" className="button button--primary button--lg">
+    📖 API Endpoints
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Can't find your API key?** Check the [dashboard](https://kixago.com/dashboard)
+- **Key not working?** Email api@kixago.com
+- **Need higher rate limits?** [Upgrade your plan](https://kixago.com/pricing)
+```
+
+---

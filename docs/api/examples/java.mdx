@@ -1,0 +1,942 @@
+---
+sidebar_position: 6
+title: "Java Examples"
+description: "Complete Java and Spring Boot code examples"
+---
+
+# Java Examples
+
+Complete, production-ready code examples for integrating Kixago API in Java and Spring Boot applications.
+
+---
+
+## Quick Start
+
+### Installation (Maven)
+
+```xml
+<!-- pom.xml -->
+<dependencies>
+    <!-- HTTP Client (Java 11+) - Built-in -->
+    
+    <!-- JSON Processing -->
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.16.0</version>
+    </dependency>
+    
+    <!-- Optional: Spring Boot -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>3.2.0</version>
+    </dependency>
+    
+    <!-- Optional: Lombok (reduces boilerplate) -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.30</version>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- Optional: Redis Cache -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+        <version>3.2.0</version>
+    </dependency>
+</dependencies>
+```
+
+### Installation (Gradle)
+
+```gradle
+dependencies {
+    // JSON Processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.0'
+    
+    // Optional: Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web:3.2.0'
+    
+    // Optional: Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    
+    // Optional: Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis:3.2.0'
+}
+```
+
+---
+
+## Basic Examples (Plain Java)
+
+### Example 1: Simple Request
+
+```java
+// KixagoExample.java
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+public class KixagoExample {
+    public static void main(String[] args) throws Exception {
+        String apiKey = System.getenv("KIXAGO_API_KEY");
+        String walletAddress = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C";
+        
+        // Create HTTP client
+        HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build();
+        
+        // Build request
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("https://api.kixago.com/v1/risk-profile/" + walletAddress))
+            .header("X-API-Key", apiKey)
+            .header("Accept", "application/json")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+        
+        // Send request
+        HttpResponse<String> response = client.send(
+            request,
+            HttpResponse.BodyHandlers.ofString()
+        );
+        
+        if (response.statusCode() == 200) {
+            // Parse JSON
+            ObjectMapper mapper = new ObjectMapper();
+            RiskProfileResponse profile = mapper.readValue(
+                response.body(),
+                RiskProfileResponse.class
+            );
+            
+            System.out.printf("DeFi Score: %d%n", profile.getDefiScore().getScore());
+            System.out.printf("Risk Level: %s%n", profile.getDefiScore().getRiskLevel());
+            System.out.printf("Health Factor: %.2f%n", profile.getGlobalHealthFactor());
+        } else {
+            System.err.printf("Error: %d%n", response.statusCode());
+        }
+    }
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```java
+// models/RiskProfileResponse.java
+package com.kixago.models;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+@Data
+public class RiskProfileResponse {
+    @JsonProperty("wallet_address")
+    private String walletAddress;
+    
+    @JsonProperty("total_collateral_usd")
+    private BigDecimal totalCollateralUsd;
+    
+    @JsonProperty("total_borrowed_usd")
+    private BigDecimal totalBorrowedUsd;
+    
+    @JsonProperty("global_health_factor")
+    private BigDecimal globalHealthFactor;
+    
+    @JsonProperty("global_ltv")
+    private BigDecimal globalLtv;
+    
+    @JsonProperty("positions_at_risk_count")
+    private Integer positionsAtRiskCount;
+    
+    @JsonProperty("last_updated")
+    private Instant lastUpdated;
+    
+    @JsonProperty("aggregation_duration")
+    private String aggregationDuration;
+    
+    @JsonProperty("lending_positions")
+    private List<LendingPosition> lendingPositions;
+    
+    @JsonProperty("defi_score")
+    private DeFiScore defiScore;
+    
+    @JsonProperty("aggregation_errors")
+    private Map<String, String> aggregationErrors;
+}
+
+// models/DeFiScore.java
+@Data
+public class DeFiScore {
+    @JsonProperty("defi_score")
+    private Integer score;
+    
+    @JsonProperty("risk_level")
+    private String riskLevel;
+    
+    @JsonProperty("risk_category")
+    private String riskCategory;
+    
+    @JsonProperty("color")
+    private String color;
+    
+    @JsonProperty("score_breakdown")
+    private ScoreBreakdown scoreBreakdown;
+    
+    @JsonProperty("risk_factors")
+    private List<RiskFactor> riskFactors;
+    
+    @JsonProperty("recommendations")
+    private Recommendations recommendations;
+    
+    @JsonProperty("liquidation_simulation")
+    private LiquidationSimulation liquidationSimulation;
+    
+    @JsonProperty("calculated_at")
+    private Instant calculatedAt;
+}
+
+// models/LendingPosition.java
+@Data
+public class LendingPosition {
+    @JsonProperty("protocol")
+    private String protocol;
+    
+    @JsonProperty("protocol_version")
+    private String protocolVersion;
+    
+    @JsonProperty("chain")
+    private String chain;
+    
+    @JsonProperty("user_address")
+    private String userAddress;
+    
+    @JsonProperty("collateral_usd")
+    private BigDecimal collateralUsd;
+    
+    @JsonProperty("borrowed_usd")
+    private BigDecimal borrowedUsd;
+    
+    @JsonProperty("health_factor")
+    private BigDecimal healthFactor;
+    
+    @JsonProperty("ltv_current")
+    private BigDecimal ltvCurrent;
+    
+    @JsonProperty("is_at_risk")
+    private Boolean isAtRisk;
+    
+    @JsonProperty("collateral_details")
+    private List<TokenDetail> collateralDetails;
+    
+    @JsonProperty("borrowed_details")
+    private List<TokenDetail> borrowedDetails;
+    
+    @JsonProperty("last_updated")
+    private Instant lastUpdated;
+}
+
+// models/TokenDetail.java
+@Data
+public class TokenDetail {
+    @JsonProperty("token")
+    private String token;
+    
+    @JsonProperty("amount")
+    private BigDecimal amount;
+    
+    @JsonProperty("usd_value")
+    private BigDecimal usdValue;
+    
+    @JsonProperty("token_address")
+    private String tokenAddress;
+}
+
+// Additional models: ComponentScore, ScoreBreakdown, RiskFactor, 
+// Recommendations, LiquidationSimulation, LiquidationScenario
+// (Follow same pattern as above)
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```java
+// client/KixagoClient.java
+package com.kixago.client;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.kixago.models.RiskProfileResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Map;
+
+public class KixagoClient {
+    private static final Logger logger = LoggerFactory.getLogger(KixagoClient.class);
+    
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final String apiKey;
+    private final String baseUrl;
+    
+    public KixagoClient(String apiKey) {
+        this(apiKey, "https://api.kixago.com");
+    }
+    
+    public KixagoClient(String apiKey, String baseUrl) {
+        this.apiKey = apiKey;
+        this.baseUrl = baseUrl;
+        
+        this.httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build();
+        
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
+    }
+    
+    public RiskProfileResponse getRiskProfile(String walletAddress) throws KixagoException {
+        if (walletAddress == null || walletAddress.trim().isEmpty()) {
+            throw new IllegalArgumentException("Wallet address cannot be empty");
+        }
+        
+        try {
+            logger.info("Fetching risk profile for {}", walletAddress);
+            
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/v1/risk-profile/" + walletAddress))
+                .header("X-API-Key", apiKey)
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(30))
+                .GET()
+                .build();
+            
+            HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString()
+            );
+            
+            // Handle HTTP errors
+            if (response.statusCode() != 200) {
+                handleErrorResponse(response);
+            }
+            
+            RiskProfileResponse profile = objectMapper.readValue(
+                response.body(),
+                RiskProfileResponse.class
+            );
+            
+            // Warn about partial failures
+            if (profile.getAggregationErrors() != null && !profile.getAggregationErrors().isEmpty()) {
+                logger.warn("Partial failure - some protocols failed: {}",
+                    profile.getAggregationErrors().keySet());
+            }
+            
+            return profile;
+            
+        } catch (java.io.IOException e) {
+            throw new KixagoException("Failed to parse response", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new KixagoException("Request interrupted", e);
+        } catch (Exception e) {
+            throw new KixagoException("Request failed: " + e.getMessage(), e);
+        }
+    }
+    
+    private void handleErrorResponse(HttpResponse<String> response) throws KixagoException {
+        int status = response.statusCode();
+        String body = response.body();
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, String> error = objectMapper.readValue(body, Map.class);
+            String message = error.getOrDefault("error", "Unknown error");
+            
+            switch (status) {
+                case 400:
+                    throw new KixagoException("Invalid request: " + message, status);
+                case 401:
+                    throw new KixagoException("Invalid API key", status);
+                case 429:
+                    throw new KixagoException("Rate limit exceeded", status);
+                case 500:
+                    throw new KixagoException("Server error", status);
+                default:
+                    throw new KixagoException("HTTP " + status + ": " + message, status);
+            }
+        } catch (Exception e) {
+            throw new KixagoException("HTTP " + status, status);
+        }
+    }
+}
+
+// exception/KixagoException.java
+public class KixagoException extends Exception {
+    private final Integer statusCode;
+    
+    public KixagoException(String message) {
+        super(message);
+        this.statusCode = null;
+    }
+    
+    public KixagoException(String message, int statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+    
+    public KixagoException(String message, Throwable cause) {
+        super(message, cause);
+        this.statusCode = null;
+    }
+    
+    public Integer getStatusCode() {
+        return statusCode;
+    }
+}
+```
+
+---
+
+## Spring Boot Integration
+
+### Example 4: Spring Boot Configuration
+
+```java
+// config/KixagoConfig.java
+package com.kixago.config;
+
+import com.kixago.client.KixagoClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.cache.annotation.EnableCaching;
+
+@Configuration
+@EnableCaching
+public class KixagoConfig {
+    
+    @Value("${kixago.api-key}")
+    private String apiKey;
+    
+    @Value("${kixago.base-url:https://api.kixago.com}")
+    private String baseUrl;
+    
+    @Bean
+    public KixagoClient kixagoClient() {
+        return new KixagoClient(apiKey, baseUrl);
+    }
+}
+
+// application.yml
+/*
+kixago:
+  api-key: ${KIXAGO_API_KEY}
+  base-url: https://api.kixago.com
+
+spring:
+  cache:
+    type: redis
+  redis:
+    host: localhost
+    port: 6379
+*/
+```
+
+---
+
+### Example 5: Spring Service with Caching
+
+```java
+// service/KixagoService.java
+package com.kixago.service;
+
+import com.kixago.client.KixagoClient;
+import com.kixago.client.KixagoException;
+import com.kixago.models.RiskProfileResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+@Service
+public class KixagoService {
+    private static final Logger logger = LoggerFactory.getLogger(KixagoService.class);
+    
+    private final KixagoClient client;
+    
+    public KixagoService(KixagoClient client) {
+        this.client = client;
+    }
+    
+    @Cacheable(value = "riskProfiles", key = "#walletAddress", unless = "#result == null")
+    public RiskProfileResponse getRiskProfile(String walletAddress) throws KixagoException {
+        logger.info("Fetching risk profile for {} (cache miss)", walletAddress);
+        return client.getRiskProfile(walletAddress);
+    }
+}
+
+// config/CacheConfig.java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+    
+    @Bean
+    public RedisCacheConfiguration cacheConfiguration() {
+        return RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofSeconds(30))
+            .serializeValuesWith(
+                RedisSerializationContext.SerializationPair.fromSerializer(
+                    new GenericJackson2JsonRedisSerializer()
+                )
+            );
+    }
+}
+```
+
+---
+
+### Example 6: Spring REST Controller
+
+```java
+// controller/WalletController.java
+package com.kixago.controller;
+
+import com.kixago.client.KixagoException;
+import com.kixago.models.RiskProfileResponse;
+import com.kixago.service.KixagoService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/wallet")
+public class WalletController {
+    
+    private final KixagoService kixagoService;
+    
+    public WalletController(KixagoService kixagoService) {
+        this.kixagoService = kixagoService;
+    }
+    
+    @GetMapping("/{address}")
+    public ResponseEntity<?> getRiskProfile(@PathVariable String address) {
+        try {
+            RiskProfileResponse profile = kixagoService.getRiskProfile(address);
+            return ResponseEntity.ok(profile);
+        } catch (KixagoException e) {
+            return ResponseEntity
+                .status(e.getStatusCode() != null ? e.getStatusCode() : 500)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 7: Credit Underwriting Service
+
+```java
+// service/UnderwritingService.java
+package com.kixago.service;
+
+import com.kixago.client.KixagoException;
+import com.kixago.models.RiskProfileResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+
+@Service
+public class UnderwritingService {
+    private static final Logger logger = LoggerFactory.getLogger(UnderwritingService.class);
+    
+    private final KixagoService kixagoService;
+    
+    public UnderwritingService(KixagoService kixagoService) {
+        this.kixagoService = kixagoService;
+    }
+    
+    public UnderwritingDecision underwrite(String walletAddress, BigDecimal requestedAmount) {
+        try {
+            RiskProfileResponse profile = kixagoService.getRiskProfile(walletAddress);
+            
+            // Check if wallet has DeFi history
+            if (profile.getDefiScore() == null) {
+                return new UnderwritingDecision(
+                    Decision.DECLINED,
+                    "No DeFi lending history found"
+                );
+            }
+            
+            int score = profile.getDefiScore().getScore();
+            String riskCategory = profile.getDefiScore().getRiskCategory();
+            BigDecimal healthFactor = profile.getGlobalHealthFactor();
+            BigDecimal collateral = profile.getTotalCollateralUsd();
+            
+            // Rule 1: Minimum credit score
+            if (score < 550) {
+                return new UnderwritingDecision(
+                    Decision.DECLINED,
+                    "DeFi credit score too low: " + score,
+                    score
+                );
+            }
+            
+            // Rule 2: Health factor requirement
+            if (healthFactor.compareTo(BigDecimal.ZERO) > 0 && 
+                healthFactor.compareTo(new BigDecimal("1.5")) < 0) {
+                return new UnderwritingDecision(
+                    Decision.DECLINED,
+                    String.format("Health factor too low: %.2f (minimum 1.5)", healthFactor),
+                    score
+                );
+            }
+            
+            // Rule 3: Collateral requirement (2x loan amount)
+            BigDecimal minCollateral = requestedAmount.multiply(new BigDecimal("2"));
+            if (collateral.compareTo(minCollateral) < 0) {
+                return new UnderwritingDecision(
+                    Decision.DECLINED,
+                    String.format("Insufficient collateral. Need $%,.0f, have $%,.0f",
+                        minCollateral, collateral),
+                    score
+                );
+            }
+            
+            // Rule 4: Risk category checks
+            if ("URGENT_ACTION_REQUIRED".equals(riskCategory)) {
+                return new UnderwritingDecision(
+                    Decision.DECLINED,
+                    "Critical risk factors detected - imminent liquidation risk",
+                    score,
+                    riskCategory
+                );
+            }
+            
+            if ("HIGH_RISK".equals(riskCategory)) {
+                return new UnderwritingDecision(
+                    Decision.MANUAL_REVIEW,
+                    "High risk category - requires underwriter review",
+                    score,
+                    riskCategory
+                );
+            }
+            
+            // Calculate max loan amount (50% of collateral)
+            BigDecimal maxLoan = collateral.multiply(new BigDecimal("0.5"));
+            
+            if (requestedAmount.compareTo(maxLoan) > 0) {
+                return new UnderwritingDecision(
+                    Decision.MANUAL_REVIEW,
+                    "Requested amount exceeds max (50% of collateral)",
+                    score,
+                    null,
+                    maxLoan
+                );
+            }
+            
+            // APPROVED!
+            return new UnderwritingDecision(
+                Decision.APPROVED,
+                String.format("Strong DeFi profile - Score %d, Risk: %s", score, riskCategory),
+                score,
+                riskCategory,
+                maxLoan
+            );
+            
+        } catch (KixagoException e) {
+            logger.error("Underwriting error for {}", walletAddress, e);
+            return new UnderwritingDecision(
+                Decision.MANUAL_REVIEW,
+                "Error fetching DeFi profile - manual review required"
+            );
+        }
+    }
+}
+
+// models/UnderwritingDecision.java
+public class UnderwritingDecision {
+    private final Decision decision;
+    private final String reason;
+    private final Integer defiScore;
+    private final String riskCategory;
+    private final BigDecimal maxLoanAmount;
+    
+    // Constructor, getters, etc.
+}
+
+public enum Decision {
+    APPROVED,
+    DECLINED,
+    MANUAL_REVIEW
+}
+```
+
+---
+
+### Example 8: Scheduled Monitoring Task
+
+```java
+// service/LiquidationMonitorService.java
+package com.kixago.service;
+
+import com.kixago.client.KixagoException;
+import com.kixago.models.RiskProfileResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class LiquidationMonitorService {
+    private static final Logger logger = LoggerFactory.getLogger(LiquidationMonitorService.class);
+    
+    private final KixagoService kixagoService;
+    
+    @Value("${kixago.monitored-wallets}")
+    private List<String> monitoredWallets;
+    
+    public LiquidationMonitorService(KixagoService kixagoService) {
+        this.kixagoService = kixagoService;
+    }
+    
+    @Scheduled(fixedRate = 300000) // Every 5 minutes
+    public void monitorWallets() {
+        logger.info("Monitoring {} wallets for liquidation risk", monitoredWallets.size());
+        
+        List<LiquidationAlert> alerts = new ArrayList<>();
+        
+        for (String wallet : monitoredWallets) {
+            try {
+                RiskProfileResponse profile = kixagoService.getRiskProfile(wallet);
+                
+                if (profile.getDefiScore() == null || 
+                    profile.getTotalCollateralUsd().compareTo(BigDecimal.ZERO) == 0) {
+                    continue;
+                }
+                
+                BigDecimal buffer = profile.getDefiScore()
+                    .getLiquidationSimulation()
+                    .getBufferPercentage();
+                
+                if (buffer.compareTo(new BigDecimal("5")) < 0) {
+                    alerts.add(new LiquidationAlert(
+                        wallet,
+                        "CRITICAL",
+                        buffer,
+                        profile.getTotalCollateralUsd(),
+                        String.format("🚨 CRITICAL: Only %.1f%% buffer remaining!", buffer)
+                    ));
+                    
+                    logger.error("CRITICAL: {} - {}% buffer, ${} at risk",
+                        wallet, buffer, profile.getTotalCollateralUsd());
+                }
+                else if (buffer.compareTo(new BigDecimal("10")) < 0) {
+                    alerts.add(new LiquidationAlert(
+                        wallet,
+                        "HIGH",
+                        buffer,
+                        profile.getTotalCollateralUsd(),
+                        String.format("⚠️ HIGH RISK: %.1f%% buffer", buffer)
+                    ));
+                    
+                    logger.warn("HIGH: {} - {}% buffer", wallet, buffer);
+                }
+                
+            } catch (KixagoException e) {
+                logger.error("Error monitoring {}", wallet, e);
+            }
+        }
+        
+        if (!alerts.isEmpty()) {
+            sendAlerts(alerts);
+        }
+        
+        logger.info("Monitoring complete. Found {} alerts.", alerts.size());
+    }
+    
+    private void sendAlerts(List<LiquidationAlert> alerts) {
+        // Implement notification logic (email, Slack, etc.)
+    }
+}
+
+// Enable scheduling in main application
+@SpringBootApplication
+@EnableScheduling
+public class KixagoApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(KixagoApplication.class, args);
+    }
+}
+```
+
+---
+
+## Testing
+
+### Example 9: JUnit Tests
+
+```java
+// KixagoClientTest.java
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class KixagoClientTest {
+    
+    private KixagoClient client;
+    
+    @BeforeEach
+    void setUp() {
+        client = new KixagoClient("test-api-key");
+    }
+    
+    @Test
+    void getRiskProfile_validAddress_returnsProfile() throws Exception {
+        // This would require mocking HttpClient
+        // For brevity, showing structure
+        
+        String walletAddress = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C";
+        RiskProfileResponse profile = client.getRiskProfile(walletAddress);
+        
+        assertNotNull(profile);
+        assertEquals(walletAddress, profile.getWalletAddress());
+    }
+    
+    @Test
+    void getRiskProfile_emptyAddress_throwsException() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            client.getRiskProfile("");
+        });
+    }
+}
+
+// UnderwritingServiceTest.java (Spring Boot Test)
+@SpringBootTest
+class UnderwritingServiceTest {
+    
+    @Autowired
+    private UnderwritingService underwritingService;
+    
+    @MockBean
+    private KixagoService kixagoService;
+    
+    @Test
+    void underwrite_highScore_approved() throws Exception {
+        // Mock response
+        RiskProfileResponse mockProfile = new RiskProfileResponse();
+        mockProfile.setDefiScore(new DeFiScore());
+        mockProfile.getDefiScore().setScore(750);
+        mockProfile.getDefiScore().setRiskCategory("LOW_RISK");
+        mockProfile.setGlobalHealthFactor(new BigDecimal("3.2"));
+        mockProfile.setTotalCollateralUsd(new BigDecimal("100000"));
+        
+        when(kixagoService.getRiskProfile(anyString()))
+            .thenReturn(mockProfile);
+        
+        UnderwritingDecision decision = underwritingService.underwrite(
+            "0xTest...",
+            new BigDecimal("10000")
+        );
+        
+        assertEquals(Decision.APPROVED, decision.getDecision());
+    }
+    
+    @Test
+    void underwrite_lowScore_declined() throws Exception {
+        RiskProfileResponse mockProfile = new RiskProfileResponse();
+        mockProfile.setDefiScore(new DeFiScore());
+        mockProfile.getDefiScore().setScore(400);
+        
+        when(kixagoService.getRiskProfile(anyString()))
+            .thenReturn(mockProfile);
+        
+        UnderwritingDecision decision = underwritingService.underwrite(
+            "0xTest...",
+            new BigDecimal("10000")
+        );
+        
+        assertEquals(Decision.DECLINED, decision.getDecision());
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use dependency injection** - Spring Boot or manual DI
+- **Implement caching** - Spring Cache with Redis
+- **Use BigDecimal for money** - Never use double/float
+- **Use Lombok** - Reduce boilerplate
+- **Structured logging** - SLF4J with context
+- **Handle timeouts** - Set appropriate durations
+- **Use Optional** - For nullable fields
+- **Type-safe models** - Use Jackson annotations
+
+### ❌ DON'T
+
+- **Don't create new HttpClient per request** - Reuse instances
+- **Don't expose API keys** - Use environment variables
+- **Don't ignore aggregation errors** - Log warnings
+- **Don't use float/double for money** - Precision loss!
+- **Don't block threads** - Use async if needed
+- **Don't swallow exceptions** - Log and rethrow appropriately
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/csharp" className="button button--primary button--lg">
+    🔷 C# Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Java SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---

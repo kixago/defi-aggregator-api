@@ -1,73 +1,95 @@
 openapi: 3.1.0
 info:
-  title: Kixago DeFi Aggregator API
-  version: 1.0.0
+  title: Kixago DeFi Credit Intelligence API
+  version: 2.0.0
   description: |
-    # Welcome to Kixago
-    
-    Kixago is a **unified DeFi data aggregator** that simplifies cross-protocol, multi-chain lending position queries. 
-    
-    Instead of integrating with Aave, Compound, and MakerDAO separately across Ethereum, Polygon, Arbitrum, and Base, 
-    you make **one API call** and get normalized data back.
-    
+    # The Credit Bureau for DeFi
+
+    Kixago provides **real-time credit intelligence for crypto-native borrowers** across all DeFi protocols and chains.
+
+    Instead of just showing wallet balances, we calculate:
+    - **FICO-style credit scores** (300-850 range)
+    - **Liquidation risk analysis** with scenario modeling
+    - **Portfolio-wide health metrics** across all chains
+    - **Actionable recommendations** for risk mitigation
+
     ## Why Kixago?
-    
-    - **One API, All Protocols**: Query Aave V2/V3, Compound V2/V3, and MakerDAO with a single endpoint
-    - **Multi-Chain by Default**: Ethereum, Polygon, Arbitrum, Base support out of the box
-    - **Normalized Responses**: All protocols return the same data structure
-    - **Real-Time Data**: Direct blockchain queries with intelligent caching
-    - **Developer-First**: Clear errors, detailed examples, and actual working code
-    
+
+    Traditional credit bureaus analyze bank statements and credit cards.  
+    **We analyze DeFi lending positions** - collateral, debt, leverage, and liquidation risk.
+
+    ### The Problem We Solve
+
+    **Before Kixago:**
+    - Banks can't underwrite crypto-native borrowers
+    - Advisors can't verify client DeFi holdings
+    - Developers spend weeks integrating 47 different protocols
+    - Traders miss liquidation opportunities
+
+    **With Kixago:**
+    - One API call returns complete credit profile
+    - Real-time data across all chains (Ethereum, Base, Arbitrum, Polygon)
+    - Normalized responses from Aave, Compound, MakerDAO
+    - Sub-2 second response times
+
     ## Quick Start
-    
+
     ```bash
-    # Get your API key at [https://kixago.com/dashboard](https://kixago.com/dashboard)
-    curl -H "Authorization: Bearer YOUR_API_KEY" \
-      "[https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress](https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress)"
+    # Get API key at https://kixago.com/dashboard
+    export KIXAGO_KEY="kixakey_..."
+
+    # Get complete credit profile for any wallet
+    curl -H "X-API-Key: $KIXAGO_KEY" \
+      "https://api.kixago.com/v1/risk-profile/vitalik.eth"
     ```
-    
-    That's it. Seriously.
-    
+
+    **Response includes:**
+    - DeFi credit score (300-850)
+    - All lending positions across chains
+    - Risk factors and recommendations
+    - Liquidation scenarios
+
   contact:
     name: Kixago API Support
-    email: support@kixago.com
+    email: api@kixago.com
     url: https://docs.kixago.com
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: Proprietary
+    url: https://kixago.com/terms
 
 servers:
-  - url: https://api.kixago.com/api/v1
-    description: Production Server
-  - url: http://localhost:3000/api/v1
-    description: Local Development Server
+  - url: https://api.kixago.com
+    description: Production API
+  - url: http://localhost:3000
+    description: Local Development
 
 security:
-  - BearerAuth: []
   - ApiKeyAuth: []
 
 tags:
-  - name: Lending
-    description: Query lending positions across all DeFi protocols
-  - name: Risk
-    description: Portfolio risk analysis and liquidation monitoring
+  - name: Credit Intelligence
+    description: DeFi credit scoring and risk analysis
   - name: Health
-    description: API health and status endpoints
+    description: API status and monitoring
 
 paths:
   /health:
     get:
       tags:
         - Health
-      summary: Health check
+      summary: API health check
       description: |
-        Simple health check endpoint to verify the API is running.
+        Simple health check endpoint for monitoring and uptime verification.
         
-        Use this for monitoring, uptime checks, or integration testing.
+        **Use cases:**
+        - Uptime monitoring
+        - Integration testing
+        - Service status verification
       operationId: healthCheck
+      security: [] # No auth required
       responses:
         '200':
-          description: API is healthy and operational
+          description: API is operational
           content:
             application/json:
               schema:
@@ -79,745 +101,720 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
-                    example: "2025-10-15T14:30:00Z"
               example:
                 status: "ok"
-                timestamp: "2025-10-15T14:30:00Z"
+                timestamp: "2025-10-21T04:19:25Z"
 
-  /lending/positions:
+  /v1/risk-profile/{walletAddress}:
     get:
       tags:
-        - Lending
-      summary: Get all lending positions for an address
+        - Credit Intelligence
+      summary: Get DeFi Credit Profile
       description: |
-        Retrieves all active lending positions for a wallet address across **all supported protocols and chains**.
-        
-        ## What You Get
-        
-        - Collateral deposited (by token, with USD values)
-        - Assets borrowed (by token, with USD values)
-        - Health factor and liquidation risk
-        - APY for each position
-        - Time estimates until liquidation (if at risk)
-        
-        ## How It Works
-        
-        1. API queries Aave V2/V3, Compound V2/V3, and MakerDAO
-        2. Checks Ethereum, Polygon, Arbitrum, and Base simultaneously
-        3. Returns only positions with active collateral or debt
-        4. Results are cached for 60 seconds for performance
-        
-        ## Protocol Coverage
-        
-        - **Aave V2**: Ethereum, Polygon
-        - **Aave V3**: Ethereum, Polygon, Arbitrum, Base
-        - **Compound V2**: Ethereum
-        - **Compound V3**: Ethereum, Arbitrum, Base, Polygon
-        - **MakerDAO**: Ethereum only
-        
+        Returns a **complete DeFi credit analysis** for any wallet address, including:
+
+        - **FICO-style credit score** (300-850 range)
+        - **All lending positions** across Aave, Compound, MakerDAO
+        - **Multi-chain aggregation** (Ethereum, Base, Arbitrum, Polygon)
+        - **Risk factor analysis** (liquidation risk, leverage, concentration)
+        - **Actionable recommendations** (immediate, short-term, long-term)
+        - **Liquidation scenarios** (what-if price drop simulations)
+
         ## Response Time
-        
-        - **With cache**: ~50ms
-        - **Without cache (first query)**: 2-5 seconds
-        - **Timeout**: 30 seconds maximum
-        
-      operationId: getLendingPositions
-      parameters:
-        - name: address
-          in: query
-          required: true
-          description: |
-            The wallet address to query. Must be a valid Ethereum address (0x... format).
-            
-            **Example**: `0xf0bb20865277abd641a307ece5ee04e79073416c`
-          schema:
-            type: string
-            pattern: '^0x[a-fA-F0-9]{40}$'
-          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-        
-        - name: chains
-          in: query
-          required: false
-          description: |
-            Comma-separated list of chains to query. If not provided, queries **all chains**.
-            
-            **Supported chains**: `ethereum`, `polygon`, `arbitrum`, `base`
-            
-            **Examples**:
-            - `?chains=ethereum` - Ethereum only
-            - `?chains=ethereum,polygon` - Ethereum and Polygon
-            - (omit parameter) - All chains
-          schema:
-            type: string
-          example: "ethereum,polygon"
-      
-      responses:
-        '200':
-          description: Successfully retrieved lending positions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LendingPositionsResponse'
-              examples:
-                singlePosition:
-                  summary: User with one Aave position
-                  value:
-                    success: true
-                    data:
-                      positions:
-                        - protocol: "aave"
-                          protocol_version: "v3"
-                          chain: "base"
-                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-                          collateral_details:
-                            - token: "WETH"
-                              amount: 1.5
-                              usd_value: 4500.00
-                              apy: 2.3
-                              token_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-                          borrowed_details:
-                            - token: "USDC"
-                              amount: 2000.00
-                              usd_value: 2000.00
-                              apy: 5.8
-                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-                          collateral_usd: 4500.00
-                          borrowed_usd: 2000.00
-                          ltv_current: 0.44
-                          ltv_liquidation_threshold: 0.80
-                          health_factor: 1.8
-                          is_at_risk: false
-                          time_to_liquidation: "No immediate risk"
-                          last_updated: "2025-10-15T14:30:00Z"
-                      count: 1
-                      errors: {}
-                      duration: "2.3s"
-                      cache_info:
-                        successes: 1
-                        errors: 0
-                    timestamp: "2025-10-15T14:30:00Z"
-                
-                multiplePositions:
-                  summary: User with positions across multiple protocols
-                  value:
-                    success: true
-                    data:
-                      positions:
-                        - protocol: "aave"
-                          protocol_version: "v3"
-                          chain: "ethereum"
-                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-                          collateral_details:
-                            - token: "WETH"
-                              amount: 10.0
-                              usd_value: 30000.00
-                              apy: 2.1
-                              token_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-                          borrowed_details:
-                            - token: "USDC"
-                              amount: 15000.00
-                              usd_value: 15000.00
-                              apy: 6.2
-                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-                          collateral_usd: 30000.00
-                          borrowed_usd: 15000.00
-                          ltv_current: 0.50
-                          ltv_liquidation_threshold: 0.825
-                          health_factor: 1.65
-                          is_at_risk: false
-                          time_to_liquidation: "No immediate risk"
-                          last_updated: "2025-10-15T14:30:00Z"
-                        - protocol: "compound"
-                          protocol_version: "v2"
-                          chain: "ethereum"
-                          user_address: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-                          collateral_details:
-                            - token: "USDC"
-                              amount: 50000.00
-                              usd_value: 50000.00
-                              apy: 4.5
-                              token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-                          borrowed_details:
-                            - token: "DAI"
-                              amount: 20000.00
-                              usd_value: 20000.00
-                              apy: 5.5
-                              token_address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
-                          collateral_usd: 50000.00
-                          borrowed_usd: 20000.00
-                          ltv_current: 0.40
-                          ltv_liquidation_threshold: 0.75
-                          health_factor: 1.875
-                          is_at_risk: false
-                          time_to_liquidation: "No immediate risk"
-                          last_updated: "2025-10-15T14:30:00Z"
-                      count: 2
-                      errors: {}
-                      duration: "3.1s"
-                      cache_info:
-                        successes: 2
-                        errors: 0
-                    timestamp: "2025-10-15T14:30:00Z"
-                
-                noPositions:
-                  summary: User with no active positions
-                  value:
-                    success: true
-                    data:
-                      positions: []
-                      count: 0
-                      errors: {}
-                      duration: "1.8s"
-                      cache_info:
-                        successes: 0
-                        errors: 0
-                    timestamp: "2025-10-15T14:30:00Z"
 
-        '400':
-          description: Invalid request parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                missingAddress:
-                  summary: Missing address parameter
-                  value:
-                    success: false
-                    error: "address parameter required"
-                    timestamp: "2025-10-15T14:30:00Z"
-                invalidAddress:
-                  summary: Invalid address format
-                  value:
-                    success: false
-                    error: "invalid address format"
-                    timestamp: "2025-10-15T14:30:00Z"
+        - **Cached:** <100ms (30-second cache)
+        - **Fresh:** 1-4 seconds (depends on chain count)
+        - **Timeout:** 30 seconds maximum
 
-  /lending/opportunities:
-    get:
-      tags:
-        - Lending
-      summary: Find best lending opportunities (Coming Soon)
-      description: |
-        **Status**: 🚧 Coming Soon
-        
-        This endpoint will return the best lending APYs across all protocols for a specific token.
-        
-        ## Planned Features
-        
-        - Compare lending APYs across Aave, Compound, and other protocols
-        - Sort by real APY (accounting for reward tokens)
-        - Filter by chain, token, and risk level
-        - Include gas cost estimates
-        
-      operationId: getLendingOpportunities
-      parameters:
-        - name: token
-          in: query
-          required: true
-          description: Token symbol to find opportunities for (e.g., USDC, WETH, DAI)
-          schema:
-            type: string
-          example: "USDC"
-        
-        - name: sort_by
-          in: query
-          required: false
-          description: Sort results by field
-          schema:
-            type: string
-            enum: [apy_real, apy_total, tvl, risk_score]
-            default: apy_real
-          example: "apy_real"
-      
-      responses:
-        '200':
-          description: Lending opportunities (placeholder response)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-                      sort_by:
-                        type: string
-                      opportunities:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/LendingOpportunity'
-                      count:
-                        type: integer
-                      message:
-                        type: string
-                  timestamp:
-                    type: string
-                    format: date-time
-              example:
-                success: true
-                data:
-                  token: "USDC"
-                  sort_by: "apy_real"
-                  opportunities: []
-                  count: 0
-                  message: "Opportunity aggregation coming soon"
-                timestamp: "2025-10-15T14:30:00Z"
-        
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+        ## Supported Protocols
 
-  /risk/portfolio:
-    get:
-      tags:
-        - Risk
-      summary: Get portfolio-wide risk analysis
-      description: |
-        Analyzes liquidation risk across **all lending positions** for an address.
-        
-        ## What You Get
-        
-        - Total collateral and debt across all protocols
-        - Weighted health factor
-        - Liquidation risk score (0-1, where 1 = immediate risk)
-        - Number of positions at risk
-        - Recommended actions to improve health
-        
+        | Protocol | Versions | Chains |
+        |----------|----------|--------|
+        | Aave | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+        | Compound | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+        | MakerDAO | V1 (Vaults) | Ethereum |
+
         ## Use Cases
-        
-        - Build liquidation alert systems
-        - Portfolio health dashboards
-        - Risk management tools
-        - Automated rebalancing triggers
-        
-        ## Risk Scoring
-        
-        | Health Factor | Risk Score | Interpretation |
-        |--------------|-----------|----------------|
-        | > 2.0 | 0.1 | Low risk |
-        | 1.5 - 2.0 | 0.3 | Medium risk |
-        | 1.0 - 1.5 | 0.7 | High risk |
-        | < 1.0 | 1.0 | Immediate liquidation risk |
-        
-      operationId: getPortfolioRisk
+
+        ### 1. Credit Underwriting (Banks)
+        ```typescript
+        const risk = await kixago.getRiskProfile('0xBorrower...');
+        if (risk.defi_score.defi_score < 550) {
+          return 'DECLINED - High liquidation risk';
+        }
+        ```
+
+        ### 2. Portfolio Verification (Advisors)
+        ```typescript
+        const profile = await kixago.getRiskProfile('client.eth');
+        // Show client their $2.2B positions with risk breakdown
+        ```
+
+        ### 3. Liquidation Monitoring (Traders)
+        ```typescript
+        const whale = await kixago.getRiskProfile('0xWhale...');
+        if (whale.global_health_factor < 1.1) {
+          alert('Liquidation opportunity: ' + whale.total_collateral_usd);
+        }
+        ```
+
+      operationId: getRiskProfile
       parameters:
-        - name: address
-          in: query
+        - name: walletAddress
+          in: path
           required: true
-          description: Wallet address to analyze
+          description: |
+            Ethereum address (0x...) or ENS name (vitalik.eth)
+            
+            **Examples:**
+            - `0xf0bb20865277aBd641a307eCe5Ee04E79073416C` (hex address)
+            - `vitalik.eth` (ENS name)
+            
+            **Format validation:**
+            - Hex addresses: Must be 42 characters (0x + 40 hex chars)
+            - ENS names: Must end with .eth
           schema:
             type: string
-            pattern: '^0x[a-fA-F0-9]{40}$'
-          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-      
+          examples:
+            hexAddress:
+              value: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+              summary: Ethereum address
+            ensName:
+              value: "vitalik.eth"
+              summary: ENS name
+
       responses:
         '200':
-          description: Portfolio risk analysis
+          description: Complete DeFi credit profile
+          headers:
+            X-Cache-Status:
+              description: Cache hit/miss indicator
+              schema:
+                type: string
+                enum: [HIT, MISS]
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PortfolioRiskResponse'
               examples:
-                healthyPortfolio:
-                  summary: Healthy portfolio with low risk
+                whaleWallet:
+                  summary: "Whale Wallet ($2.2B, High Risk)"
+                  description: Real example of a large position with dangerous leverage
                   value:
-                    success: true
-                    data:
-                      total_collateral_usd: 100000.00
-                      total_borrowed_usd: 40000.00
-                      weighted_ltv: 0.40
-                      weighted_health_factor: 2.5
-                      liquidation_risk_score: 0.1
-                      positions_at_risk: 0
-                      positions_near_risk: 0
-                      largest_risk: null
-                      recommended_actions: []
-                      last_updated: "2025-10-15T14:30:00Z"
-                    timestamp: "2025-10-15T14:30:00Z"
-                
-                atRiskPortfolio:
-                  summary: Portfolio with high liquidation risk
+                    wallet_address: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+                    total_collateral_usd: 2175957718.47
+                    total_borrowed_usd: 1905081695.88
+                    global_health_factor: 1.067
+                    global_ltv: 89.02
+                    positions_at_risk_count: 2
+                    last_updated: "2025-10-21T04:19:25Z"
+                    aggregation_duration: "1.234s"
+                    lending_positions:
+                      - protocol: "Aave"
+                        protocol_version: "V3"
+                        chain: "Ethereum"
+                        user_address: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+                        collateral_usd: 2112215608.12
+                        borrowed_usd: 1884925796.26
+                        health_factor: 1.065
+                        ltv_current: 89.24
+                        is_at_risk: true
+                        collateral_details:
+                          - token: "weETH"
+                            amount: 496800.01
+                            usd_value: 2112215608.12
+                            token_address: "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+                        borrowed_details:
+                          - token: "WETH"
+                            amount: 478632.98
+                            usd_value: 1884925796.26
+                            token_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+                        last_updated: "2025-10-21T04:19:25Z"
+                    defi_score:
+                      defi_score: 467
+                      risk_level: "High Risk"
+                      risk_category: "HIGH_RISK"
+                      color: "orange"
+                      score_breakdown:
+                        health_factor_score:
+                          component_score: 20
+                          weight: 0.4
+                          weighted_contribution: 8.0
+                          reasoning: "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with <10% price drop."
+                        leverage_score:
+                          component_score: 20
+                          weight: 0.3
+                          weighted_contribution: 6.0
+                          reasoning: "LTV 86-95% is very aggressive. Extremely vulnerable to liquidation on minor price movements."
+                        diversification_score:
+                          component_score: 45
+                          weight: 0.15
+                          weighted_contribution: 6.75
+                          reasoning: "Diversification across 2 protocol(s) and 1 asset(s). Top asset represents 100.0% of collateral."
+                        volatility_score:
+                          component_score: 50
+                          weight: 0.1
+                          weighted_contribution: 5.0
+                          reasoning: "Significant exposure to volatile assets. High risk during market downturns."
+                        protocol_risk_score:
+                          component_score: 95
+                          weight: 0.05
+                          weighted_contribution: 4.75
+                          reasoning: "All positions in highly trusted, battle-tested protocols (Aave, Compound, Maker)."
+                        total_internal_score: 30.5
+                      risk_factors:
+                        - severity: "critical"
+                          factor: "Imminent Liquidation Risk"
+                          description: "Health factor 1.067 means position will be liquidated if collateral value drops 6.7%"
+                          impact_on_score: -40
+                        - severity: "high"
+                          factor: "Extreme Leverage"
+                          description: "89.0% LTV leaves minimal safety buffer before liquidation"
+                          impact_on_score: -30
+                      recommendations:
+                        immediate:
+                          - "🚨 URGENT: Deposit $387M more collateral OR repay debt to raise health factor above 1.5"
+                          - "🚨 URGENT: Repay $291M debt to reduce LTV below 70%"
+                        short_term:
+                          - "Diversify across multiple protocols (Aave, Compound, Morpho)"
+                          - "Consider converting some volatile collateral to stablecoins"
+                        long_term:
+                          - "Maintain health factor above 2.0 for optimal safety margin"
+                          - "Target LTV below 50% for conservative risk profile"
+                      liquidation_simulation:
+                        current_health_factor: 1.067
+                        liquidation_threshold: 1.0
+                        buffer_percentage: 6.7
+                        scenarios:
+                          - event: "Collateral drops 5%"
+                            new_health_factor: 1.014
+                            status: "Near liquidation"
+                            time_estimate: "~6 hours if price trend continues"
+                          - event: "Collateral drops 10%"
+                            new_health_factor: 0.961
+                            status: "LIQUIDATED"
+                            estimated_loss: "~$218M in liquidation penalties"
+                      calculated_at: "2025-10-21T04:19:25Z"
+                    aggregation_errors:
+                      CompoundV3:Ethereum: "could not get numAssets from Compound V3 market"
+
+                healthyWallet:
+                  summary: "Healthy Wallet (Low Risk)"
                   value:
-                    success: true
-                    data:
-                      total_collateral_usd: 50000.00
-                      total_borrowed_usd: 42000.00
-                      weighted_ltv: 0.84
-                      weighted_health_factor: 1.2
-                      liquidation_risk_score: 0.7
-                      positions_at_risk: 0
-                      positions_near_risk: 2
-                      largest_risk:
-                        protocol: "aave"
-                        protocol_version: "v3"
-                        chain: "ethereum"
-                        health_factor: 1.2
-                        collateral_usd: 30000.00
-                        borrowed_usd: 25000.00
-                      recommended_actions:
-                        - "HIGH RISK: Consider depositing more collateral or paying down borrows"
-                      last_updated: "2025-10-15T14:30:00Z"
-                    timestamp: "2025-10-15T14:30:00Z"
-        
+                    wallet_address: "0xHealthy123..."
+                    total_collateral_usd: 100000.00
+                    total_borrowed_usd: 30000.00
+                    global_health_factor: 3.2
+                    global_ltv: 30.0
+                    positions_at_risk_count: 0
+                    last_updated: "2025-10-21T04:19:25Z"
+                    aggregation_duration: "0.891s"
+                    lending_positions:
+                      - protocol: "Aave"
+                        protocol_version: "V3"
+                        chain: "Ethereum"
+                        collateral_usd: 100000.00
+                        borrowed_usd: 30000.00
+                        health_factor: 3.2
+                        ltv_current: 30.0
+                        is_at_risk: false
+                        collateral_details:
+                          - token: "USDC"
+                            amount: 100000.00
+                            usd_value: 100000.00
+                            token_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+                        borrowed_details:
+                          - token: "DAI"
+                            amount: 30000.00
+                            usd_value: 30000.00
+                            token_address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+                        last_updated: "2025-10-21T04:19:25Z"
+                    defi_score:
+                      defi_score: 782
+                      risk_level: "Very Low Risk"
+                      risk_category: "LOW_RISK"
+                      color: "green"
+                      score_breakdown:
+                        health_factor_score:
+                          component_score: 100
+                          weight: 0.4
+                          weighted_contribution: 40.0
+                          reasoning: "Health factor >= 2.0 is extremely safe."
+                        leverage_score:
+                          component_score: 100
+                          weight: 0.3
+                          weighted_contribution: 30.0
+                          reasoning: "LTV 0-30% is minimal leverage."
+                        diversification_score:
+                          component_score: 20
+                          weight: 0.15
+                          weighted_contribution: 3.0
+                          reasoning: "Diversification across 1 protocol(s) and 2 asset(s)."
+                        volatility_score:
+                          component_score: 100
+                          weight: 0.1
+                          weighted_contribution: 10.0
+                          reasoning: "Collateral primarily in low-volatility assets (stablecoins)."
+                        protocol_risk_score:
+                          component_score: 95
+                          weight: 0.05
+                          weighted_contribution: 4.75
+                          reasoning: "All positions in highly trusted protocols."
+                        total_internal_score: 87.75
+                      risk_factors: []
+                      recommendations:
+                        immediate: []
+                        short_term:
+                          - "Consider diversifying across protocols to reduce smart contract risk"
+                        long_term:
+                          - "Maintain health factor above 2.0 for optimal safety"
+                      liquidation_simulation:
+                        current_health_factor: 3.2
+                        liquidation_threshold: 1.0
+                        buffer_percentage: 220.0
+                        scenarios:
+                          - event: "Collateral drops 5%"
+                            new_health_factor: 3.04
+                            status: "Safe"
+                          - event: "Collateral drops 10%"
+                            new_health_factor: 2.88
+                            status: "Safe"
+                          - event: "Collateral drops 20% (stress test)"
+                            new_health_factor: 2.56
+                            status: "Safe"
+                      calculated_at: "2025-10-21T04:19:25Z"
+
+                noPositions:
+                  summary: "Wallet with No DeFi Positions"
+                  value:
+                    wallet_address: "0xNoPositions..."
+                    total_collateral_usd: 0
+                    total_borrowed_usd: 0
+                    global_health_factor: 0
+                    global_ltv: 0
+                    positions_at_risk_count: 0
+                    last_updated: "2025-10-21T04:19:25Z"
+                    aggregation_duration: "0.652s"
+                    lending_positions: []
+                    defi_score: null
+
         '400':
           description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidAddress:
+                  summary: Invalid address format
+                  value:
+                    error: "invalid address format - use hex address or ENS name"
+                ensResolutionFailed:
+                  summary: ENS name doesn't resolve
+                  value:
+                    error: "could not resolve ENS name: nonexistent.eth"
 
-# START OF THE CONSOLIDATED COMPONENTS BLOCK
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "missing or invalid API key"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Error generating portfolio risk"
+
 components:
-  securitySchemes:  # <-- MOVED from the top, now a sibling of schemas
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: API Key
-      description: |
-        Preferred authentication method. Include your API key in the Authorization header.
-        
-        Example: `Authorization: Bearer kixakey_7eBHF9Ndxd_...`
-        
-        Get your API key at https://kixago.com/dashboard
-    
+  securitySchemes:
     ApiKeyAuth:
       type: apiKey
-      in: query
-      name: api-key
+      in: header
+      name: X-API-Key
       description: |
-        Alternative authentication method using query parameter.
+        **Your API key** - Get it at https://kixago.com/dashboard
         
-        Example: `?api-key=kixakey_7eBHF9Ndxd_...`
+        Include in every request header:
+        ```
+        X-API-Key: kixakey_7eBHF9Ndxd...
+        ```
         
-        Note: Less secure than header method. Prefer BearerAuth in production.
-  
-  schemas:  # <-- EXISTING
+        **Security best practices:**
+        - Never commit API keys to version control
+        - Use environment variables
+        - Rotate keys periodically
+        - Use different keys for dev/prod
+
+  schemas:
     TokenDetail:
       type: object
-      description: Details for a single token (collateral or borrowed)
+      description: Individual token position (collateral or debt)
       required:
         - token
         - amount
         - usd_value
-        - apy
         - token_address
       properties:
         token:
           type: string
           description: Token symbol
-          example: "WETH"
+          examples: ["WETH", "USDC", "weETH", "DAI"]
         amount:
           type: number
           format: double
-          description: Raw token amount (in token's native decimals)
-          example: 1.5
+          description: Token amount in native decimals
+          example: 496800.01
         usd_value:
           type: number
           format: double
-          description: Current USD value of this position
-          example: 4500.00
-        apy:
-          type: number
-          format: double
-          description: Annual Percentage Yield (for collateral) or Rate (for borrows)
-          example: 2.3
+          description: Current USD value
+          example: 2112215608.12
         token_address:
           type: string
-          description: Contract address of the token
-          example: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+          description: Contract address
+          pattern: '^0x[a-fA-F0-9]{40}$'
+          example: "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
 
     LendingPosition:
       type: object
-      description: A normalized lending position across any protocol
+      description: Single lending position on one protocol/chain
       required:
         - protocol
         - protocol_version
         - chain
         - user_address
-        - collateral_details
-        - borrowed_details
         - collateral_usd
         - borrowed_usd
-        - ltv_current
-        - ltv_liquidation_threshold
         - health_factor
+        - ltv_current
         - is_at_risk
-        - time_to_liquidation
         - last_updated
       properties:
         protocol:
           type: string
-          description: Protocol name
-          enum: [aave, compound, makerdao]
-          example: "aave"
+          enum: [Aave, Compound, MakerDAO]
+          example: "Aave"
         protocol_version:
           type: string
-          description: Protocol version
-          example: "v3"
+          examples: ["V3", "V2", "1"]
         chain:
           type: string
-          description: Blockchain network
-          enum: [ethereum, polygon, arbitrum, base]
-          example: "base"
+          enum: [Ethereum, Base, Arbitrum, Polygon]
+          example: "Ethereum"
         user_address:
           type: string
-          description: User's wallet address
-          example: "0xf0bb20865277abd641a307ece5ee04e79073416c"
-        collateral_details:
-          type: array
-          description: List of collateral assets
-          items:
-            $ref: '#/components/schemas/TokenDetail'
-        borrowed_details:
-          type: array
-          description: List of borrowed assets
-          items:
-            $ref: '#/components/schemas/TokenDetail'
+          pattern: '^0x[a-fA-F0-9]{40}$'
         collateral_usd:
           type: number
           format: double
-          description: Total USD value of all collateral
-          example: 4500.00
+          description: Total collateral value in USD
         borrowed_usd:
           type: number
           format: double
-          description: Total USD value of all borrows
-          example: 2000.00
-        ltv_current:
-          type: number
-          format: double
-          description: Current Loan-to-Value ratio
-          example: 0.44
-        ltv_liquidation_threshold:
-          type: number
-          format: double
-          description: LTV at which liquidation occurs
-          example: 0.80
+          description: Total debt value in USD
         health_factor:
           type: number
           format: double
           description: |
-            Health factor representing liquidation risk.
-            - > 1.0 = Safe
-            - < 1.0 = At risk of liquidation
-          example: 1.8
+            Liquidation proximity indicator:
+            - > 2.0: Very safe
+            - 1.5-2.0: Safe
+            - 1.0-1.5: Risky
+            - < 1.0: Liquidated
+          example: 1.065
+        ltv_current:
+          type: number
+          format: double
+          description: Current loan-to-value ratio (%)
+          example: 89.24
         is_at_risk:
           type: boolean
-          description: True if position is at immediate liquidation risk
-          example: false
-        time_to_liquidation:
-          type: string
-          description: Estimated time until liquidation (if at risk)
-          example: "No immediate risk"
+          description: True if health factor < 1.2
+        collateral_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenDetail'
+        borrowed_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenDetail'
         last_updated:
           type: string
           format: date-time
-          description: Timestamp of last update
-          example: "2025-10-15T14:30:00Z"
 
-    LendingOpportunity:
+    ComponentScore:
       type: object
-      description: A yield opportunity for a specific token
-      properties:
-        protocol:
-          type: string
-          example: "aave"
-        chain:
-          type: string
-          example: "ethereum"
-        token:
-          type: string
-          example: "USDC"
-        apy_base:
-          type: number
-          format: double
-          description: Base lending APY
-          example: 5.2
-        apy_rewards:
-          type: number
-          format: double
-          description: Additional APY from reward tokens
-          example: 1.8
-        apy_total:
-          type: number
-          format: double
-          description: Total APY (base + rewards)
-          example: 7.0
-        apy_real:
-          type: number
-          format: double
-          description: Real APY accounting for gas and slippage
-          example: 6.85
-        tvl:
-          type: number
-          format: double
-          description: Total Value Locked in this market
-          example: 1000000000
-        risk_score:
-          type: number
-          format: double
-          description: Risk score (0-1, lower is safer)
-          example: 0.2
-        estimated_yield_on_50k:
-          type: number
-          format: double
-          description: Estimated annual yield on $50k deposit
-          example: 3425
-
-    PortfolioRisk:
-      type: object
-      description: Aggregated risk analysis across all positions
+      description: Individual scoring component (e.g., Health Factor)
       required:
-        - total_collateral_usd
-        - total_borrowed_usd
-        - weighted_ltv
-        - weighted_health_factor
-        - liquidation_risk_score
-        - positions_at_risk
-        - positions_near_risk
-        - last_updated
+        - component_score
+        - weight
+        - weighted_contribution
+        - reasoning
       properties:
-        total_collateral_usd:
+        component_score:
           type: number
           format: double
-          description: Sum of all collateral across all positions
-          example: 100000.00
-        total_borrowed_usd:
+          description: Score out of 100
+          minimum: 0
+          maximum: 100
+        weight:
           type: number
           format: double
-          description: Sum of all debt across all positions
-          example: 40000.00
-        weighted_ltv:
+          description: Component weight in final score
+          example: 0.4
+        weighted_contribution:
           type: number
           format: double
-          description: Portfolio-wide LTV
-          example: 0.40
-        weighted_health_factor:
-          type: number
-          format: double
-          description: Average health factor across all positions
-          example: 2.5
-        liquidation_risk_score:
-          type: number
-          format: double
-          description: Overall risk score (0-1)
-          example: 0.1
-        positions_at_risk:
-          type: integer
-          description: Number of positions with health factor < 1.0
-          example: 0
-        positions_near_risk:
-          type: integer
-          description: Number of positions with health factor < 1.5
-          example: 0
-        largest_risk:
+          description: component_score × weight
+        reasoning:
+          type: string
+          description: Human-readable explanation
+
+    ScoreBreakdown:
+      type: object
+      description: Detailed breakdown of the 5 scoring components
+      required:
+        - health_factor_score
+        - leverage_score
+        - diversification_score
+        - volatility_score
+        - protocol_risk_score
+        - total_internal_score
+      properties:
+        health_factor_score:
           allOf:
-            - $ref: '#/components/schemas/LendingPosition'
-          nullable: true
-          description: Position with lowest health factor
-        recommended_actions:
+            - $ref: '#/components/schemas/ComponentScore'
+            - description: "40% weight - Proximity to liquidation"
+        leverage_score:
+          allOf:
+            - $ref: '#/components/schemas/ComponentScore'
+            - description: "30% weight - Debt-to-collateral ratio"
+        diversification_score:
+          allOf:
+            - $ref: '#/components/schemas/ComponentScore'
+            - description: "15% weight - Concentration risk"
+        volatility_score:
+          allOf:
+            - $ref: '#/components/schemas/ComponentScore'
+            - description: "10% weight - Collateral asset risk"
+        protocol_risk_score:
+          allOf:
+            - $ref: '#/components/schemas/ComponentScore'
+            - description: "5% weight - Smart contract maturity"
+        total_internal_score:
+          type: number
+          format: double
+          description: Sum of all weighted contributions (0-100)
+          example: 30.5
+
+    RiskFactor:
+      type: object
+      required:
+        - severity
+        - factor
+        - description
+        - impact_on_score
+      properties:
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        factor:
+          type: string
+          examples: ["Imminent Liquidation Risk", "Extreme Leverage"]
+        description:
+          type: string
+        impact_on_score:
+          type: integer
+          description: Negative score impact
+
+    Recommendations:
+      type: object
+      required:
+        - immediate
+        - short_term
+        - long_term
+      properties:
+        immediate:
           type: array
           items:
             type: string
-          description: Suggested actions to improve portfolio health
-          example: []
-        last_updated:
-          type: string
-          format: date-time
-          example: "2025-10-15T14:30:00Z"
+          description: Actions to take within 24 hours
+        short_term:
+          type: array
+          items:
+            type: string
+          description: Actions to take within 1 week
+        long_term:
+          type: array
+          items:
+            type: string
+          description: Strategic goals (1-3 months)
 
-    LendingPositionsResponse:
+    LiquidationScenario:
       type: object
       required:
-        - success
-        - data
-        - timestamp
+        - event
+        - new_health_factor
+        - status
       properties:
-        success:
-          type: boolean
-          description: Whether the request succeeded
-          example: true
-        data:
-          type: object
-          required:
-            - positions
-            - count
-            - errors
-            - duration
-            - cache_info
-          properties:
-            positions:
-              type: array
-              items:
-                $ref: '#/components/schemas/LendingPosition'
-            count:
-              type: integer
-              description: Number of positions found
-              example: 2
-            errors:
-              type: object
-              additionalProperties:
-                type: string
-              description: Map of protocol/chain to error messages (if any)
-              example: {}
-            duration:
-              type: string
-              description: Time taken to complete request
-              example: "2.3s"
-            cache_info:
-              type: object
-              properties:
-                successes:
-                  type: integer
-                  example: 2
-                errors:
-                  type: integer
-                  example: 0
-        timestamp:
+        event:
+          type: string
+          examples: ["Collateral drops 5%", "Collateral drops 10%"]
+        new_health_factor:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [Safe, Near liquidation, LIQUIDATED]
+        time_estimate:
+          type: string
+          nullable: true
+        estimated_loss:
+          type: string
+          nullable: true
+
+    LiquidationSimulation:
+      type: object
+      required:
+        - current_health_factor
+        - liquidation_threshold
+        - buffer_percentage
+        - scenarios
+      properties:
+        current_health_factor:
+          type: number
+          format: double
+        liquidation_threshold:
+          type: number
+          format: double
+          example: 1.0
+        buffer_percentage:
+          type: number
+          format: double
+          description: "% price can drop before liquidation"
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/LiquidationScenario'
+
+    DeFiScore:
+      type: object
+      description: Complete DeFi credit score (300-850 FICO-style)
+      required:
+        - defi_score
+        - risk_level
+        - risk_category
+        - color
+        - score_breakdown
+        - risk_factors
+        - recommendations
+        - liquidation_simulation
+        - calculated_at
+      properties:
+        defi_score:
+          type: integer
+          minimum: 300
+          maximum: 850
+          description: FICO-style credit score
+          example: 467
+        risk_level:
+          type: string
+          enum:
+            - Very Low Risk
+            - Low Risk
+            - Medium Risk
+            - High Risk
+            - Very High Risk
+        risk_category:
+          type: string
+          enum:
+            - LOW_RISK
+            - MODERATE_RISK
+            - ELEVATED_RISK
+            - HIGH_RISK
+            - URGENT_ACTION_REQUIRED
+        color:
+          type: string
+          enum: [green, blue, yellow, orange, red]
+        score_breakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        risk_factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskFactor'
+        recommendations:
+          $ref: '#/components/schemas/Recommendations'
+        liquidation_simulation:
+          $ref: '#/components/schemas/LiquidationSimulation'
+        calculated_at:
           type: string
           format: date-time
-          example: "2025-10-15T14:30:00Z"
 
     PortfolioRiskResponse:
       type: object
+      description: Complete portfolio risk profile response
       required:
-        - success
-        - data
-        - timestamp
+        - wallet_address
+        - total_collateral_usd
+        - total_borrowed_usd
+        - global_health_factor
+        - global_ltv
+        - positions_at_risk_count
+        - last_updated
+        - aggregation_duration
+        - lending_positions
       properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/PortfolioRisk'
-        timestamp:
+        wallet_address:
+          type: string
+          pattern: '^0x[a-fA-F0-9]{40}$'
+        total_collateral_usd:
+          type: number
+          format: double
+        total_borrowed_usd:
+          type: number
+          format: double
+        global_health_factor:
+          type: number
+          format: double
+        global_ltv:
+          type: number
+          format: double
+        positions_at_risk_count:
+          type: integer
+        last_updated:
           type: string
           format: date-time
-          example: "2025-10-15T14:30:00Z"
+        aggregation_duration:
+          type: string
+          description: Time taken to fetch all data
+          example: "1.234s"
+        lending_positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/LendingPosition'
+        defi_score:
+          allOf:
+            - $ref: '#/components/schemas/DeFiScore'
+          nullable: true
+          description: Null if no positions found
+        aggregation_errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: Errors from individual protocols (non-fatal)
 
     ErrorResponse:
       type: object
       required:
-        - success
         - error
-        - timestamp
       properties:
-        success:
-          type: boolean
-          example: false
         error:
           type: string
           description: Human-readable error message
-          example: "address parameter required"
-        timestamp:
-          type: string
-          format: date-time
-          example: "2025-10-15T14:30:00Z"

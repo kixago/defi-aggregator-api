@@ -1,0 +1,1417 @@
+---
+sidebar_position: 3
+title: "Go Examples"
+description: "Complete Go code examples"
+---
+
+# Go Examples
+
+Complete, production-ready code examples for integrating Kixago API in Go applications.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# Create a new Go module
+go mod init myapp
+
+# No external dependencies required for basic usage
+# Go's standard library includes everything needed
+
+# Optional: For better JSON handling
+go get github.com/json-iterator/go
+
+# Optional: For HTTP router
+go get github.com/gorilla/mux
+
+# Optional: For Redis caching
+go get github.com/redis/go-redis/v9
+
+# Optional: For environment variables
+go get github.com/joho/godotenv
+```
+
+### Environment Setup
+
+Store your API key in environment variables:
+
+```bash
+# .env
+KIXAGO_API_KEY=kixakey_your_key_here
+```
+
+```go
+// Load environment variables
+import "github.com/joho/godotenv"
+
+func init() {
+    godotenv.Load()
+}
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request
+
+```go
+// basic_example.go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "os"
+)
+
+// Basic response structure
+type RiskProfile struct {
+    WalletAddress    string  `json:"wallet_address"`
+    TotalCollateral  float64 `json:"total_collateral_usd"`
+    TotalBorrowed    float64 `json:"total_borrowed_usd"`
+    HealthFactor     float64 `json:"global_health_factor"`
+    LTV              float64 `json:"global_ltv"`
+    DeFiScore        *DeFiScore `json:"defi_score"`
+}
+
+type DeFiScore struct {
+    Score        int    `json:"defi_score"`
+    RiskLevel    string `json:"risk_level"`
+    RiskCategory string `json:"risk_category"`
+}
+
+func getRiskProfile(walletAddress string) (*RiskProfile, error) {
+    apiKey := os.Getenv("KIXAGO_API_KEY")
+    url := fmt.Sprintf("https://api.kixago.com/v1/risk-profile/%s", walletAddress)
+    
+    // Create request
+    req, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create request: %w", err)
+    }
+    
+    // Add API key header
+    req.Header.Set("X-API-Key", apiKey)
+    
+    // Make request
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        return nil, fmt.Errorf("request failed: %w", err)
+    }
+    defer resp.Body.Close()
+    
+    // Check status code
+    if resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(resp.Body)
+        return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+    }
+    
+    // Parse response
+    var profile RiskProfile
+    if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+        return nil, fmt.Errorf("failed to decode response: %w", err)
+    }
+    
+    return &profile, nil
+}
+
+func main() {
+    profile, err := getRiskProfile("0xf0bb20865277aBd641a307eCe5Ee04E79073416C")
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    if profile.DeFiScore != nil {
+        fmt.Printf("DeFi Score: %d\n", profile.DeFiScore.Score)
+        fmt.Printf("Risk Level: %s\n", profile.DeFiScore.RiskLevel)
+    }
+    fmt.Printf("Health Factor: %.2f\n", profile.HealthFactor)
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```go
+// types.go
+package kixago
+
+import "time"
+
+// TokenDetail represents a single token position
+type TokenDetail struct {
+    Token        string  `json:"token"`
+    Amount       float64 `json:"amount"`
+    USDValue     float64 `json:"usd_value"`
+    TokenAddress string  `json:"token_address"`
+}
+
+// LendingPosition represents a position on a single protocol/chain
+type LendingPosition struct {
+    Protocol           string         `json:"protocol"`
+    ProtocolVersion    string         `json:"protocol_version"`
+    Chain              string         `json:"chain"`
+    UserAddress        string         `json:"user_address"`
+    CollateralUSD      float64        `json:"collateral_usd"`
+    BorrowedUSD        float64        `json:"borrowed_usd"`
+    HealthFactor       float64        `json:"health_factor"`
+    LTVCurrent         float64        `json:"ltv_current"`
+    IsAtRisk           bool           `json:"is_at_risk"`
+    CollateralDetails  []TokenDetail  `json:"collateral_details"`
+    BorrowedDetails    []TokenDetail  `json:"borrowed_details"`
+    LastUpdated        string         `json:"last_updated"`
+}
+
+// ComponentScore represents a single scoring component
+type ComponentScore struct {
+    Score                  float64 `json:"component_score"`
+    Weight                 float64 `json:"weight"`
+    WeightedContribution   float64 `json:"weighted_contribution"`
+    Reasoning              string  `json:"reasoning"`
+}
+
+// ScoreBreakdown contains all 5 scoring components
+type ScoreBreakdown struct {
+    HealthFactorScore      ComponentScore `json:"health_factor_score"`
+    LeverageScore          ComponentScore `json:"leverage_score"`
+    DiversificationScore   ComponentScore `json:"diversification_score"`
+    VolatilityScore        ComponentScore `json:"volatility_score"`
+    ProtocolRiskScore      ComponentScore `json:"protocol_risk_score"`
+    TotalInternalScore     float64        `json:"total_internal_score"`
+}
+
+// RiskFactor represents a specific issue
+type RiskFactor struct {
+    Severity        string `json:"severity"`
+    Factor          string `json:"factor"`
+    Description     string `json:"description"`
+    ImpactOnScore   int    `json:"impact_on_score"`
+}
+
+// Recommendations contains actionable advice
+type Recommendations struct {
+    Immediate  []string `json:"immediate"`
+    ShortTerm  []string `json:"short_term"`
+    LongTerm   []string `json:"long_term"`
+}
+
+// LiquidationScenario represents a what-if scenario
+type LiquidationScenario struct {
+    Event            string  `json:"event"`
+    NewHealthFactor  float64 `json:"new_health_factor"`
+    Status           string  `json:"status"`
+    TimeEstimate     string  `json:"time_estimate,omitempty"`
+    EstimatedLoss    string  `json:"estimated_loss,omitempty"`
+}
+
+// LiquidationSimulation contains all scenarios
+type LiquidationSimulation struct {
+    CurrentHealthFactor   float64               `json:"current_health_factor"`
+    LiquidationThreshold  float64               `json:"liquidation_threshold"`
+    BufferPercentage      float64               `json:"buffer_percentage"`
+    Scenarios             []LiquidationScenario `json:"scenarios"`
+}
+
+// DeFiScore represents the complete credit score
+type DeFiScore struct {
+    Score                 int                    `json:"defi_score"`
+    RiskLevel             string                 `json:"risk_level"`
+    RiskCategory          string                 `json:"risk_category"`
+    Color                 string                 `json:"color"`
+    ScoreBreakdown        ScoreBreakdown         `json:"score_breakdown"`
+    RiskFactors           []RiskFactor           `json:"risk_factors"`
+    Recommendations       Recommendations        `json:"recommendations"`
+    LiquidationSimulation LiquidationSimulation  `json:"liquidation_simulation"`
+    CalculatedAt          string                 `json:"calculated_at"`
+}
+
+// RiskProfileResponse is the complete API response
+type RiskProfileResponse struct {
+    WalletAddress        string            `json:"wallet_address"`
+    TotalCollateralUSD   float64           `json:"total_collateral_usd"`
+    TotalBorrowedUSD     float64           `json:"total_borrowed_usd"`
+    GlobalHealthFactor   float64           `json:"global_health_factor"`
+    GlobalLTV            float64           `json:"global_ltv"`
+    PositionsAtRiskCount int               `json:"positions_at_risk_count"`
+    LastUpdated          string            `json:"last_updated"`
+    AggregationDuration  string            `json:"aggregation_duration"`
+    LendingPositions     []LendingPosition `json:"lending_positions"`
+    DeFiScore            *DeFiScore        `json:"defi_score"`
+    AggregationErrors    map[string]string `json:"aggregation_errors,omitempty"`
+}
+```
+
+---
+
+### Example 3: Client with Error Handling
+
+```go
+// client.go
+package kixago
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "time"
+)
+
+// Client represents a Kixago API client
+type Client struct {
+    APIKey     string
+    BaseURL    string
+    HTTPClient *http.Client
+}
+
+// NewClient creates a new Kixago client
+func NewClient(apiKey string) *Client {
+    return &Client{
+        APIKey:  apiKey,
+        BaseURL: "https://api.kixago.com",
+        HTTPClient: &http.Client{
+            Timeout: 30 * time.Second,
+        },
+    }
+}
+
+// APIError represents an API error response
+type APIError struct {
+    StatusCode int
+    Message    string
+    Body       string
+}
+
+func (e *APIError) Error() string {
+    return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Message)
+}
+
+// GetRiskProfile fetches the complete risk profile for a wallet
+func (c *Client) GetRiskProfile(ctx context.Context, walletAddress string) (*RiskProfileResponse, error) {
+    url := fmt.Sprintf("%s/v1/risk-profile/%s", c.BaseURL, walletAddress)
+    
+    // Create request with context
+    req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create request: %w", err)
+    }
+    
+    // Add headers
+    req.Header.Set("X-API-Key", c.APIKey)
+    req.Header.Set("Accept", "application/json")
+    
+    // Make request
+    resp, err := c.HTTPClient.Do(req)
+    if err != nil {
+        return nil, fmt.Errorf("request failed: %w", err)
+    }
+    defer resp.Body.Close()
+    
+    // Read response body
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read response: %w", err)
+    }
+    
+    // Handle HTTP errors
+    if resp.StatusCode != http.StatusOK {
+        var errResp struct {
+            Error string `json:"error"`
+        }
+        json.Unmarshal(body, &errResp)
+        
+        message := errResp.Error
+        if message == "" {
+            message = string(body)
+        }
+        
+        return nil, &APIError{
+            StatusCode: resp.StatusCode,
+            Message:    message,
+            Body:       string(body),
+        }
+    }
+    
+    // Parse successful response
+    var profile RiskProfileResponse
+    if err := json.Unmarshal(body, &profile); err != nil {
+        return nil, fmt.Errorf("failed to decode response: %w", err)
+    }
+    
+    // Warn about partial failures
+    if len(profile.AggregationErrors) > 0 {
+        fmt.Printf("⚠️ Warning: Some protocols failed: %v\n", profile.AggregationErrors)
+    }
+    
+    return &profile, nil
+}
+
+// Usage example
+func ExampleClient() {
+    client := NewClient(os.Getenv("KIXAGO_API_KEY"))
+    
+    ctx := context.Background()
+    profile, err := client.GetRiskProfile(ctx, "0xf0bb20865277aBd641a307eCe5Ee04E79073416C")
+    if err != nil {
+        if apiErr, ok := err.(*APIError); ok {
+            switch apiErr.StatusCode {
+            case 400:
+                fmt.Println("Invalid wallet address")
+            case 401:
+                fmt.Println("Invalid API key")
+            case 429:
+                fmt.Println("Rate limit exceeded")
+            default:
+                fmt.Printf("API error: %v\n", apiErr)
+            }
+        } else {
+            fmt.Printf("Request error: %v\n", err)
+        }
+        return
+    }
+    
+    if profile.DeFiScore != nil {
+        fmt.Printf("DeFi Score: %d\n", profile.DeFiScore.Score)
+        fmt.Printf("Risk Level: %s\n", profile.DeFiScore.RiskLevel)
+    }
+}
+```
+
+---
+
+## Caching Implementation
+
+### Example 4: Simple In-Memory Cache
+
+```go
+// cache.go
+package kixago
+
+import (
+    "sync"
+    "time"
+)
+
+// CacheEntry represents a cached item with expiration
+type CacheEntry struct {
+    Data      *RiskProfileResponse
+    ExpiresAt time.Time
+}
+
+// SimpleCache is a thread-safe in-memory cache
+type SimpleCache struct {
+    mu    sync.RWMutex
+    items map[string]*CacheEntry
+    ttl   time.Duration
+}
+
+// NewSimpleCache creates a new cache with specified TTL
+func NewSimpleCache(ttl time.Duration) *SimpleCache {
+    return &SimpleCache{
+        items: make(map[string]*CacheEntry),
+        ttl:   ttl,
+    }
+}
+
+// Get retrieves a cached item if not expired
+func (c *SimpleCache) Get(key string) *RiskProfileResponse {
+    c.mu.RLock()
+    defer c.mu.RUnlock()
+    
+    entry, exists := c.items[key]
+    if !exists {
+        return nil
+    }
+    
+    if time.Now().After(entry.ExpiresAt) {
+        // Expired - clean up
+        go func() {
+            c.mu.Lock()
+            delete(c.items, key)
+            c.mu.Unlock()
+        }()
+        return nil
+    }
+    
+    return entry.Data
+}
+
+// Set stores an item in the cache
+func (c *SimpleCache) Set(key string, data *RiskProfileResponse) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    
+    c.items[key] = &CacheEntry{
+        Data:      data,
+        ExpiresAt: time.Now().Add(c.ttl),
+    }
+}
+
+// Clear removes all cached items
+func (c *SimpleCache) Clear() {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    
+    c.items = make(map[string]*CacheEntry)
+}
+
+// CachedClient wraps Client with caching
+type CachedClient struct {
+    *Client
+    cache *SimpleCache
+}
+
+// NewCachedClient creates a client with caching
+func NewCachedClient(apiKey string, ttl time.Duration) *CachedClient {
+    return &CachedClient{
+        Client: NewClient(apiKey),
+        cache:  NewSimpleCache(ttl),
+    }
+}
+
+// GetRiskProfile fetches profile with caching
+func (c *CachedClient) GetRiskProfile(ctx context.Context, walletAddress string) (*RiskProfileResponse, error) {
+    // Check cache first
+    if cached := c.cache.Get(walletAddress); cached != nil {
+        fmt.Println("✅ Cache HIT")
+        return cached, nil
+    }
+    
+    fmt.Println("❌ Cache MISS - fetching from API")
+    
+    // Fetch from API
+    profile, err := c.Client.GetRiskProfile(ctx, walletAddress)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Cache the result
+    c.cache.Set(walletAddress, profile)
+    
+    return profile, nil
+}
+
+// Usage
+func ExampleCache() {
+    client := NewCachedClient(os.Getenv("KIXAGO_API_KEY"), 30*time.Second)
+    ctx := context.Background()
+    
+    // First call - API request
+    profile1, _ := client.GetRiskProfile(ctx, "0xf0bb...")
+    
+    // Second call - cached (fast!)
+    profile2, _ := client.GetRiskProfile(ctx, "0xf0bb...")
+    
+    fmt.Printf("Same data: %v\n", profile1 == profile2)
+}
+```
+
+---
+
+### Example 5: Redis Cache (Production)
+
+```go
+// redis_cache.go
+package kixago
+
+import (
+    "context"
+    "encoding/json"
+    "time"
+    
+    "github.com/redis/go-redis/v9"
+)
+
+// RedisCache provides Redis-backed caching
+type RedisCache struct {
+    client *redis.Client
+    ttl    time.Duration
+}
+
+// NewRedisCache creates a new Redis cache
+func NewRedisCache(addr string, password string, ttl time.Duration) *RedisCache {
+    rdb := redis.NewClient(&redis.Options{
+        Addr:     addr,
+        Password: password,
+        DB:       0,
+    })
+    
+    return &RedisCache{
+        client: rdb,
+        ttl:    ttl,
+    }
+}
+
+// Get retrieves a profile from Redis
+func (r *RedisCache) Get(ctx context.Context, key string) (*RiskProfileResponse, error) {
+    cacheKey := fmt.Sprintf("kixago:profile:%s", key)
+    
+    data, err := r.client.Get(ctx, cacheKey).Result()
+    if err == redis.Nil {
+        return nil, nil // Cache miss
+    }
+    if err != nil {
+        return nil, fmt.Errorf("redis get failed: %w", err)
+    }
+    
+    var profile RiskProfileResponse
+    if err := json.Unmarshal([]byte(data), &profile); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal cached data: %w", err)
+    }
+    
+    return &profile, nil
+}
+
+// Set stores a profile in Redis
+func (r *RedisCache) Set(ctx context.Context, key string, profile *RiskProfileResponse) error {
+    cacheKey := fmt.Sprintf("kixago:profile:%s", key)
+    
+    data, err := json.Marshal(profile)
+    if err != nil {
+        return fmt.Errorf("failed to marshal profile: %w", err)
+    }
+    
+    if err := r.client.Set(ctx, cacheKey, data, r.ttl).Err(); err != nil {
+        return fmt.Errorf("redis set failed: %w", err)
+    }
+    
+    return nil
+}
+
+// Close closes the Redis connection
+func (r *RedisCache) Close() error {
+    return r.client.Close()
+}
+
+// RedisCachedClient wraps Client with Redis caching
+type RedisCachedClient struct {
+    *Client
+    cache *RedisCache
+}
+
+// NewRedisCachedClient creates a client with Redis caching
+func NewRedisCachedClient(apiKey, redisAddr, redisPassword string, ttl time.Duration) *RedisCachedClient {
+    return &RedisCachedClient{
+        Client: NewClient(apiKey),
+        cache:  NewRedisCache(redisAddr, redisPassword, ttl),
+    }
+}
+
+// GetRiskProfile fetches profile with Redis caching
+func (c *RedisCachedClient) GetRiskProfile(ctx context.Context, walletAddress string) (*RiskProfileResponse, error) {
+    // Try cache first
+    cached, err := c.cache.Get(ctx, walletAddress)
+    if err != nil {
+        fmt.Printf("Cache error: %v\n", err)
+    }
+    if cached != nil {
+        fmt.Println("✅ Redis cache HIT")
+        return cached, nil
+    }
+    
+    fmt.Println("❌ Redis cache MISS")
+    
+    // Fetch from API
+    profile, err := c.Client.GetRiskProfile(ctx, walletAddress)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Cache the result (don't fail on cache errors)
+    if err := c.cache.Set(ctx, walletAddress, profile); err != nil {
+        fmt.Printf("Failed to cache result: %v\n", err)
+    }
+    
+    return profile, nil
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 6: Credit Underwriting System
+
+```go
+// underwriting.go
+package main
+
+import (
+    "context"
+    "fmt"
+)
+
+// Decision represents an underwriting decision
+type Decision string
+
+const (
+    DecisionApproved      Decision = "APPROVED"
+    DecisionDeclined      Decision = "DECLINED"
+    DecisionManualReview  Decision = "MANUAL_REVIEW"
+)
+
+// UnderwritingDecision contains the complete decision
+type UnderwritingDecision struct {
+    Decision       Decision
+    Reason         string
+    DeFiScore      int
+    RiskCategory   string
+    MaxLoanAmount  float64
+    Conditions     []string
+}
+
+// UnderwriteBorrower performs credit underwriting
+func UnderwriteBorrower(
+    ctx context.Context,
+    client *kixago.CachedClient,
+    walletAddress string,
+    requestedLoanAmount float64,
+) (*UnderwritingDecision, error) {
+    profile, err := client.GetRiskProfile(ctx, walletAddress)
+    if err != nil {
+        return &UnderwritingDecision{
+            Decision: DecisionManualReview,
+            Reason:   fmt.Sprintf("Error fetching profile: %v", err),
+        }, nil
+    }
+    
+    // Check if wallet has DeFi history
+    if profile.DeFiScore == nil {
+        return &UnderwritingDecision{
+            Decision: DecisionDeclined,
+            Reason:   "No DeFi lending history found",
+        }, nil
+    }
+    
+    score := profile.DeFiScore.Score
+    riskCategory := profile.DeFiScore.RiskCategory
+    healthFactor := profile.GlobalHealthFactor
+    collateral := profile.TotalCollateralUSD
+    
+    // Rule 1: Minimum credit score
+    if score < 550 {
+        return &UnderwritingDecision{
+            Decision:  DecisionDeclined,
+            Reason:    fmt.Sprintf("DeFi credit score too low: %d", score),
+            DeFiScore: score,
+        }, nil
+    }
+    
+    // Rule 2: Health factor requirement
+    if healthFactor > 0 && healthFactor < 1.5 {
+        return &UnderwritingDecision{
+            Decision:  DecisionDeclined,
+            Reason:    fmt.Sprintf("Health factor too low: %.2f (minimum 1.5)", healthFactor),
+            DeFiScore: score,
+        }, nil
+    }
+    
+    // Rule 3: Collateral requirement (2x loan amount)
+    minCollateral := requestedLoanAmount * 2
+    if collateral < minCollateral {
+        return &UnderwritingDecision{
+            Decision:  DecisionDeclined,
+            Reason:    fmt.Sprintf("Insufficient collateral. Need $%.0f, have $%.0f", minCollateral, collateral),
+            DeFiScore: score,
+        }, nil
+    }
+    
+    // Rule 4: Risk category checks
+    if riskCategory == "URGENT_ACTION_REQUIRED" {
+        return &UnderwritingDecision{
+            Decision:     DecisionDeclined,
+            Reason:       "Critical risk factors detected - imminent liquidation risk",
+            DeFiScore:    score,
+            RiskCategory: riskCategory,
+        }, nil
+    }
+    
+    if riskCategory == "HIGH_RISK" {
+        return &UnderwritingDecision{
+            Decision:     DecisionManualReview,
+            Reason:       "High risk category - requires underwriter review",
+            DeFiScore:    score,
+            RiskCategory: riskCategory,
+            Conditions:   profile.DeFiScore.Recommendations.Immediate,
+        }, nil
+    }
+    
+    // Calculate max loan amount (50% of collateral)
+    maxLoan := collateral * 0.5
+    
+    if requestedLoanAmount > maxLoan {
+        return &UnderwritingDecision{
+            Decision:      DecisionManualReview,
+            Reason:        "Requested amount exceeds max (50% of collateral)",
+            DeFiScore:     score,
+            MaxLoanAmount: maxLoan,
+        }, nil
+    }
+    
+    // APPROVED!
+    return &UnderwritingDecision{
+        Decision:      DecisionApproved,
+        Reason:        fmt.Sprintf("Strong DeFi profile - Score %d, Risk: %s", score, riskCategory),
+        DeFiScore:     score,
+        RiskCategory:  riskCategory,
+        MaxLoanAmount: maxLoan,
+        Conditions:    []string{},
+    }, nil
+}
+
+// Usage
+func main() {
+    client := kixago.NewCachedClient(os.Getenv("KIXAGO_API_KEY"), 30*time.Second)
+    ctx := context.Background()
+    
+    decision, err := UnderwriteBorrower(
+        ctx,
+        client,
+        "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+        500000, // $500K loan request
+    )
+    
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    fmt.Printf("Decision: %s\n", decision.Decision)
+    fmt.Printf("Reason: %s\n", decision.Reason)
+    
+    if decision.Decision == DecisionApproved {
+        fmt.Printf("Max loan amount: $%.0f\n", decision.MaxLoanAmount)
+    }
+}
+```
+
+---
+
+### Example 7: Liquidation Monitoring Bot
+
+```go
+// liquidation_monitor.go
+package main
+
+import (
+    "context"
+    "fmt"
+    "sort"
+    "sync"
+)
+
+// LiquidationAlert represents a risk alert
+type LiquidationAlert struct {
+    Wallet          string
+    CollateralUSD   float64
+    HealthFactor    float64
+    BufferPercent   float64
+    Urgency         string
+    Message         string
+    EstimatedLoss   string
+}
+
+// MonitorLiquidationRisk monitors multiple wallets concurrently
+func MonitorLiquidationRisk(
+    ctx context.Context,
+    client *kixago.CachedClient,
+    walletAddresses []string,
+) ([]LiquidationAlert, error) {
+    var (
+        alerts []LiquidationAlert
+        mu     sync.Mutex
+        wg     sync.WaitGroup
+    )
+    
+    // Process wallets concurrently
+    for _, address := range walletAddresses {
+        wg.Add(1)
+        go func(addr string) {
+            defer wg.Done()
+            
+            profile, err := client.GetRiskProfile(ctx, addr)
+            if err != nil {
+                fmt.Printf("Error monitoring %s: %v\n", addr, err)
+                return
+            }
+            
+            // Skip if no positions
+            if profile.DeFiScore == nil || profile.TotalCollateralUSD == 0 {
+                return
+            }
+            
+            sim := profile.DeFiScore.LiquidationSimulation
+            buffer := sim.BufferPercentage
+            health := sim.CurrentHealthFactor
+            
+            var alert *LiquidationAlert
+            
+            // Check for liquidation risk
+            if buffer < 5 {
+                // CRITICAL: Liquidation imminent
+                var estimatedLoss string
+                for _, scenario := range sim.Scenarios {
+                    if scenario.Status == "LIQUIDATED" {
+                        estimatedLoss = scenario.EstimatedLoss
+                        break
+                    }
+                }
+                
+                alert = &LiquidationAlert{
+                    Wallet:        addr,
+                    CollateralUSD: profile.TotalCollateralUSD,
+                    HealthFactor:  health,
+                    BufferPercent: buffer,
+                    Urgency:       "CRITICAL",
+                    Message:       fmt.Sprintf("🚨 CRITICAL: Only %.1f%% buffer remaining! Liquidation imminent!", buffer),
+                    EstimatedLoss: estimatedLoss,
+                }
+            } else if buffer < 10 {
+                // HIGH: Vulnerable to volatility
+                alert = &LiquidationAlert{
+                    Wallet:        addr,
+                    CollateralUSD: profile.TotalCollateralUSD,
+                    HealthFactor:  health,
+                    BufferPercent: buffer,
+                    Urgency:       "HIGH",
+                    Message:       fmt.Sprintf("⚠️ HIGH RISK: %.1f%% buffer - vulnerable to normal market volatility", buffer),
+                }
+            } else if buffer < 20 {
+                // MEDIUM: Monitor closely
+                alert = &LiquidationAlert{
+                    Wallet:        addr,
+                    CollateralUSD: profile.TotalCollateralUSD,
+                    HealthFactor:  health,
+                    BufferPercent: buffer,
+                    Urgency:       "MEDIUM",
+                    Message:       fmt.Sprintf("⚡ WARNING: %.1f%% buffer - monitor closely during volatility", buffer),
+                }
+            }
+            
+            if alert != nil {
+                mu.Lock()
+                alerts = append(alerts, *alert)
+                mu.Unlock()
+            }
+        }(address)
+    }
+    
+    wg.Wait()
+    
+    // Sort by urgency (CRITICAL first)
+    sort.Slice(alerts, func(i, j int) bool {
+        urgencyOrder := map[string]int{"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2}
+        return urgencyOrder[alerts[i].Urgency] < urgencyOrder[alerts[j].Urgency]
+    })
+    
+    return alerts, nil
+}
+
+// Usage
+func main() {
+    client := kixago.NewCachedClient(os.Getenv("KIXAGO_API_KEY"), 30*time.Second)
+    ctx := context.Background()
+    
+    whaleWallets := []string{
+        "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+        "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        // ... more wallets
+    }
+    
+    alerts, err := MonitorLiquidationRisk(ctx, client, whaleWallets)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    // Display alerts
+    for _, alert := range alerts {
+        fmt.Println(alert.Message)
+        fmt.Printf("  Wallet: %s\n", alert.Wallet)
+        fmt.Printf("  Collateral at risk: $%.0f\n", alert.CollateralUSD)
+        fmt.Printf("  Health Factor: %.3f\n", alert.HealthFactor)
+        fmt.Println()
+        
+        if alert.Urgency == "CRITICAL" {
+            // Send critical alert
+            sendCriticalAlert(alert)
+        }
+    }
+}
+```
+
+---
+
+### Example 8: Portfolio Dashboard
+
+```go
+// portfolio_dashboard.go
+package main
+
+import (
+    "context"
+    "fmt"
+)
+
+// PortfolioSummary contains dashboard data
+type PortfolioSummary struct {
+    Wallet              string
+    Score               int
+    RiskLevel           string
+    TotalAUM            float64
+    NetWorth            float64
+    HealthFactor        float64
+    LTV                 float64
+    PositionsCount      int
+    Chains              []string
+    Protocols           []string
+    AtRisk              bool
+    TopRecommendations  []string
+}
+
+// GeneratePortfolioSummary creates a dashboard summary
+func GeneratePortfolioSummary(
+    ctx context.Context,
+    client *kixago.CachedClient,
+    walletAddress string,
+) (*PortfolioSummary, error) {
+    profile, err := client.GetRiskProfile(ctx, walletAddress)
+    if err != nil {
+        return nil, err
+    }
+    
+    if profile.DeFiScore == nil {
+        return nil, fmt.Errorf("no DeFi positions found")
+    }
+    
+    // Extract unique chains and protocols
+    chainSet := make(map[string]bool)
+    protocolSet := make(map[string]bool)
+    for _, pos := range profile.LendingPositions {
+        chainSet[pos.Chain] = true
+        protocolSet[pos.Protocol] = true
+    }
+    
+    chains := make([]string, 0, len(chainSet))
+    for chain := range chainSet {
+        chains = append(chains, chain)
+    }
+    
+    protocols := make([]string, 0, len(protocolSet))
+    for protocol := range protocolSet {
+        protocols = append(protocols, protocol)
+    }
+    
+    // Calculate net worth
+    netWorth := profile.TotalCollateralUSD - profile.TotalBorrowedUSD
+    
+    return &PortfolioSummary{
+        Wallet:             walletAddress,
+        Score:              profile.DeFiScore.Score,
+        RiskLevel:          profile.DeFiScore.RiskLevel,
+        TotalAUM:           profile.TotalCollateralUSD,
+        NetWorth:           netWorth,
+        HealthFactor:       profile.GlobalHealthFactor,
+        LTV:                profile.GlobalLTV,
+        PositionsCount:     len(profile.LendingPositions),
+        Chains:             chains,
+        Protocols:          protocols,
+        AtRisk:             profile.PositionsAtRiskCount > 0,
+        TopRecommendations: profile.DeFiScore.Recommendations.Immediate,
+    }, nil
+}
+
+// Usage
+func main() {
+    client := kixago.NewCachedClient(os.Getenv("KIXAGO_API_KEY"), 30*time.Second)
+    ctx := context.Background()
+    
+    summary, err := GeneratePortfolioSummary(ctx, client, "0xf0bb20865277aBd641a307eCe5Ee04E79073416C")
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    fmt.Println("=== PORTFOLIO SUMMARY ===")
+    fmt.Printf("DeFi Score: %d (%s)\n", summary.Score, summary.RiskLevel)
+    fmt.Printf("Total AUM: $%.0f\n", summary.TotalAUM)
+    fmt.Printf("Net Worth: $%.0f\n", summary.NetWorth)
+    fmt.Printf("Health Factor: %.2f\n", summary.HealthFactor)
+    fmt.Printf("LTV: %.1f%%\n", summary.LTV)
+    fmt.Printf("Positions: %d across %v\n", summary.PositionsCount, summary.Chains)
+    fmt.Printf("Protocols: %v\n", summary.Protocols)
+    
+    if summary.AtRisk {
+        fmt.Println("\n⚠️ POSITIONS AT RISK:")
+        for _, rec := range summary.TopRecommendations {
+            fmt.Printf("  - %s\n", rec)
+        }
+    }
+}
+```
+
+---
+
+## HTTP Server Example
+
+### Example 9: Production HTTP Server
+
+```go
+// server.go
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+    "time"
+    
+    "github.com/gorilla/mux"
+)
+
+var (
+    kixagoClient *kixago.CachedClient
+)
+
+func init() {
+    // Initialize client
+    kixagoClient = kixago.NewCachedClient(
+        os.Getenv("KIXAGO_API_KEY"),
+        30*time.Second,
+    )
+}
+
+// GetWalletProfileHandler handles GET /api/wallet/{address}
+func GetWalletProfileHandler(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    address := vars["address"]
+    
+    ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+    defer cancel()
+    
+    profile, err := kixagoClient.GetRiskProfile(ctx, address)
+    if err != nil {
+        if apiErr, ok := err.(*kixago.APIError); ok {
+            http.Error(w, apiErr.Message, apiErr.StatusCode)
+            return
+        }
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(profile)
+}
+
+// UnderwriteRequest represents an underwriting request
+type UnderwriteRequest struct {
+    WalletAddress string  `json:"wallet_address"`
+    LoanAmount    float64 `json:"loan_amount"`
+}
+
+// UnderwriteHandler handles POST /api/underwrite
+func UnderwriteHandler(w http.ResponseWriter, r *http.Request) {
+    var req UnderwriteRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+    
+    ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+    defer cancel()
+    
+    decision, err := UnderwriteBorrower(ctx, kixagoClient, req.WalletAddress, req.LoanAmount)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(decision)
+}
+
+// MonitorRequest represents a monitoring request
+type MonitorRequest struct {
+    Wallets []string `json:"wallets"`
+}
+
+// MonitorResponse represents a monitoring response
+type MonitorResponse struct {
+    Alerts []LiquidationAlert `json:"alerts"`
+    Count  int                `json:"count"`
+}
+
+// MonitorHandler handles POST /api/monitor
+func MonitorHandler(w http.ResponseWriter, r *http.Request) {
+    var req MonitorRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+    
+    ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+    defer cancel()
+    
+    alerts, err := MonitorLiquidationRisk(ctx, kixagoClient, req.Wallets)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    
+    resp := MonitorResponse{
+        Alerts: alerts,
+        Count:  len(alerts),
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(resp)
+}
+
+// HealthHandler handles GET /health
+func HealthHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func main() {
+    r := mux.NewRouter()
+    
+    // Routes
+    r.HandleFunc("/api/wallet/{address}", GetWalletProfileHandler).Methods("GET")
+    r.HandleFunc("/api/underwrite", UnderwriteHandler).Methods("POST")
+    r.HandleFunc("/api/monitor", MonitorHandler).Methods("POST")
+    r.HandleFunc("/health", HealthHandler).Methods("GET")
+    
+    // Start server
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    
+    log.Printf("Server starting on port %s\n", port)
+    if err := http.ListenAndServe(":"+port, r); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+---
+
+## Testing
+
+### Example 10: Unit Tests
+
+```go
+// client_test.go
+package kixago
+
+import (
+    "context"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestGetRiskProfile(t *testing.T) {
+    tests := []struct {
+        name           string
+        statusCode     int
+        responseBody   string
+        expectedError  bool
+        expectedScore  int
+    }{
+        {
+            name:       "successful request",
+            statusCode: 200,
+            responseBody: `{
+                "wallet_address": "0xTest...",
+                "total_collateral_usd": 100000,
+                "total_borrowed_usd": 30000,
+                "global_health_factor": 3.2,
+                "global_ltv": 30.0,
+                "positions_at_risk_count": 0,
+                "last_updated": "2025-01-15T12:00:00Z",
+                "aggregation_duration": "1.234s",
+                "lending_positions": [],
+                "defi_score": {
+                    "defi_score": 750,
+                    "risk_level": "Very Low Risk",
+                    "risk_category": "VERY_LOW_RISK",
+                    "color": "green",
+                    "score_breakdown": {},
+                    "risk_factors": [],
+                    "recommendations": {"immediate": [], "short_term": [], "long_term": []},
+                    "liquidation_simulation": {},
+                    "calculated_at": "2025-01-15T12:00:00Z"
+                }
+            }`,
+            expectedError: false,
+            expectedScore: 750,
+        },
+        {
+            name:          "404 error",
+            statusCode:    404,
+            responseBody:  `{"error": "Wallet not found"}`,
+            expectedError: true,
+        },
+        {
+            name:          "401 error",
+            statusCode:    401,
+            responseBody:  `{"error": "Invalid API key"}`,
+            expectedError: true,
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Create test server
+            server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.WriteHeader(tt.statusCode)
+                w.Write([]byte(tt.responseBody))
+            }))
+            defer server.Close()
+            
+            // Create client with test server URL
+            client := NewClient("test-api-key")
+            client.BaseURL = server.URL
+            
+            // Make request
+            ctx := context.Background()
+            profile, err := client.GetRiskProfile(ctx, "0xTest...")
+            
+            // Check error
+            if tt.expectedError {
+                if err == nil {
+                    t.Error("expected error, got nil")
+                }
+                return
+            }
+            
+            if err != nil {
+                t.Errorf("unexpected error: %v", err)
+                return
+            }
+            
+            // Check response
+            if profile.DeFiScore == nil {
+                t.Error("expected DeFiScore, got nil")
+                return
+            }
+            
+            if profile.DeFiScore.Score != tt.expectedScore {
+                t.Errorf("expected score %d, got %d", tt.expectedScore, profile.DeFiScore.Score)
+            }
+        })
+    }
+}
+
+func TestUnderwriteBorrower(t *testing.T) {
+    // Mock client would go here
+    // This is a simplified example
+    
+    tests := []struct {
+        name              string
+        score             int
+        healthFactor      float64
+        collateral        float64
+        loanAmount        float64
+        expectedDecision  Decision
+    }{
+        {
+            name:             "approved - good score and collateral",
+            score:            750,
+            healthFactor:     3.2,
+            collateral:       100000,
+            loanAmount:       10000,
+            expectedDecision: DecisionApproved,
+        },
+        {
+            name:             "declined - low score",
+            score:            400,
+            healthFactor:     3.2,
+            collateral:       100000,
+            loanAmount:       10000,
+            expectedDecision: DecisionDeclined,
+        },
+        {
+            name:             "declined - insufficient collateral",
+            score:            750,
+            healthFactor:     3.2,
+            collateral:       10000,
+            loanAmount:       100000,
+            expectedDecision: DecisionDeclined,
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Test logic would go here
+            // This is a placeholder for demonstration
+        })
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use context for timeouts** - Always pass context to API calls
+- **Handle errors explicitly** - Go's error handling is verbose but clear
+- **Use goroutines for concurrency** - Process multiple wallets in parallel
+- **Cache responses** - Implement caching for 30+ seconds
+- **Use structs for type safety** - Define all response types
+- **Close resources** - Always defer closing HTTP bodies
+- **Use environment variables** - Never hardcode API keys
+- **Write table-driven tests** - Standard Go testing pattern
+
+### ❌ DON'T
+
+- **Don't ignore errors** - Always check `err != nil`
+- **Don't leak goroutines** - Use WaitGroups and contexts
+- **Don't share state unsafely** - Use mutexes for concurrent access
+- **Don't block forever** - Use timeouts on all HTTP requests
+- **Don't expose API keys** - Keep credentials in environment
+- **Don't assume fields exist** - Use pointers for optional fields
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/javascript" className="button button--primary button--lg">
+    📜 JavaScript Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices Guide
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Go SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---

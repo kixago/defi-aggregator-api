@@ -1,214 +1,424 @@
-# 🧠 Kixago DeFi Aggregator API
+# Kixago DeFi Credit Intelligence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![API Status](https://img.shields.io/badge/API-Live-success)](https://api.kixago.com/api/v1/health)
-[![Docs](https://img.shields.io/badge/docs-live-brightgreen)](https://docs.kixago.com)
-[![Stars](https://img.shields.io/github/stars/kixago/defi-aggregator-api?style=social)](https://github.com/kixago/defi-aggregator-api/stargazers)
+**Documentation for the DeFi credit scoring and risk analysis API**
 
-> **One unified API for cross-chain DeFi lending data — normalized, real-time, and production-ready.**
+[![Docs](https://img.shields.io/badge/docs-kixago.com-blue)](https://docs.kixago.com)
+[![API Status](https://img.shields.io/badge/API-live-success)](https://api.kixago.com)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Kixago aggregates data from **Aave, Compound, and MakerDAO** across **Ethereum, Polygon, Arbitrum, and Base**, returning every lending position in a **single, standardized JSON format**.
-Designed for **developers, analysts, and financial products** who need fast, reliable DeFi data without managing multiple RPCs or contracts.
+This is the documentation site for Kixago's DeFi Credit Intelligence API. If you need to query lending positions across Aave, Compound, and MakerDAO without spending weeks integrating each protocol separately, you're in the right place.
 
----
-
-## 🚀 Overview
-
-| Feature                        | Description                                                                        |
-| ------------------------------ | ---------------------------------------------------------------------------------- |
-| 🔗 **Multi-Chain Aggregation** | Query lending data across Ethereum, Polygon, Arbitrum, and Base with one endpoint. |
-| ⚙️ **Unified Data Model**      | All responses normalized — no more protocol-specific quirks or transformations.    |
-| ⚡ **High Performance**         | Smart caching and real-time RPC fallbacks for sub-100ms cached queries.            |
-| 🧩 **Plug-and-Play API**       | No setup, infrastructure, or hosting required — just your API key.                 |
-| 🧠 **Enterprise-Ready**        | Designed for dashboards, risk tools, analytics, and financial automation.          |
+[Get Started](https://docs.kixago.com/docs/intro) • [API Reference](https://docs.kixago.com/docs/api) • [Get API Key](https://kixago.com/dashboard)
 
 ---
 
-## 💡 Why Kixago?
+## What This Does
 
-Kixago was built to solve the **fragmentation problem** in decentralized finance. Developers shouldn’t need to integrate 5+ APIs just to show a user’s portfolio.
+Kixago aggregates DeFi lending positions across protocols and chains, then gives you back a credit score (300-850, like FICO) plus detailed risk analysis. One API call, complete picture.
 
-### The Challenge
+**You get:**
+- Credit scores for any wallet address (FICO-style 300-850 range)
+- Complete position data across Aave V2/V3, Compound V2/V3, MakerDAO
+- Multi-chain aggregation (Ethereum, Base, Arbitrum, Polygon)
+- Health factor calculations and liquidation risk analysis
+- Actual recommendations you can act on
 
-Building a DeFi app means handling:
-
-* Multiple smart contract ABIs
-* Different chains and RPCs
-* Inconsistent data models
-* Latency and reliability issues
-
-### The Kixago Advantage
-
-| Capability                    | Covalent | DefiLlama | Kixago               |
-| ----------------------------- | -------- | --------- | -------------------- |
-| **Real-Time Lending Data**    | Delayed  | Partial   | ✅ Instant, RPC-level |
-| **Cross-Chain Normalization** | Partial  | ✅         | ✅ Unified structure  |
-| **Portfolio Risk Analysis**   | ❌        | ❌         | ✅ Built-in           |
-| **Cache Acceleration**        | ❌        | ❌         | ✅ 60-sec smart TTL   |
-| **Custom Query Engine**       | ❌        | ❌         | ✅ Aggregation API    |
-| **Developer Examples**        | ✅        | ✅         | ✅ Multi-language     |
-| **API-Only Architecture**     | ✅        | ✅         | ✅ Secure + hosted    |
-
-**Kixago focuses on precision, speed, and developer simplicity — a single endpoint that aggregates the full DeFi picture.**
+**Response time:** 1-2 seconds for the whole thing.
 
 ---
 
-## 🧰 Quick Start
+## Why This Exists
 
-### Get Your API Key
+I spent three months last year building DeFi protocol integrations for a client. Aave V2, Aave V3 across four chains, Compound V2, Compound V3, MakerDAO. Each protocol has different ABIs, different data structures, different ways of calculating health factors. By the time I was done, I had 2,000+ lines of code just to answer "what does this wallet owe and what's their risk of liquidation?"
 
-1. Go to [kixago.com/dashboard](https://kixago.com/dashboard)
-2. Sign up and generate your API key
-3. Use it in your preferred language
+Then the client asked to add another wallet. And another protocol. And support Polygon.
 
-### Example (JavaScript)
+That's when I realized this is a problem everyone building in DeFi has. You either:
+- Spend months building and maintaining protocol integrations yourself
+- Use indexed data (The Graph, etc.) which is always delayed and fragmented
+- Just... don't offer multi-protocol support
 
-```javascript
-const API_KEY = "YOUR_API_KEY";
-const address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+None of these are good options. So I built Kixago.
 
-const res = await fetch(
-  `https://api.kixago.com/api/v1/lending/positions?address=${address}`,
-  { headers: { Authorization: `Bearer ${API_KEY}` } }
-);
+---
 
-const data = await res.json();
-console.log(data);
+## The Actual Problem
+
+Let's say you're building a DeFi dashboard and want to show users their complete lending positions.
+
+### Without Kixago
+
+You need to integrate with each protocol separately:
+
+```typescript
+// Aave V3 on Ethereum
+const aaveEthProvider = new ethers.providers.JsonRpcProvider(ETHEREUM_RPC);
+const aaveEthContract = new ethers.Contract(AAVE_V3_ETH_POOL, AaveV3ABI, aaveEthProvider);
+const aaveEthData = await aaveEthContract.getUserAccountData(walletAddress);
+
+// Now parse the response, convert to USD, calculate health factor...
+// Now do this again for Aave V3 on Base
+// And Aave V3 on Arbitrum  
+// And Aave V3 on Polygon
+// And Aave V2 on Ethereum
+// And Compound V2...
+// And Compound V3 on Base...
+// You get the idea.
 ```
 
-Try it now:
-➡️ **[Full Documentation →](https://docs.kixago.com)**
+**Time required:** 2-3 weeks per protocol if you know what you're doing. Longer if you don't.
 
----
+**Maintenance burden:** Every protocol upgrade means updating your integration.
 
-## 🔍 Example Use Cases
+**Data freshness:** You either query in real-time (slow, expensive) or index it yourself (complex, delayed).
 
-### 1. Portfolio Dashboards
+### With Kixago
 
-Instantly display all lending and borrowing positions for a given wallet.
-
-### 2. Risk Management
-
-Evaluate health factors and liquidation risk in real time.
-
-### 3. DeFi Analytics
-
-Aggregate normalized on-chain data for data science or visualization pipelines.
-
-### 4. Alerts & Monitoring
-
-Build bots that alert users when their portfolio is nearing liquidation.
-
----
-
-## 🌐 Supported Protocols
-
-| Protocol           | Supported Chains                  |
-| ------------------ | --------------------------------- |
-| **Aave V2/V3**     | Ethereum, Polygon, Arbitrum, Base |
-| **Compound V2/V3** | Ethereum, Polygon, Base           |
-| **MakerDAO**       | Ethereum                          |
-| **Upcoming**       | Morpho, Spark, Venus, Radiant     |
-
----
-
-## 🧱 Architecture Overview
-
-```
-┌────────────────────────┐
-│   Developer / Product  │
-└────────────┬───────────┘
-             │
-             ▼
-     ┌───────────────┐
-     │  Kixago API   │
-     ├───────────────┤
-     │ Aggregation   │
-     │ Normalization │
-     │ Caching Layer │
-     └───────┬───────┘
-             │
-     ┌───────▼────────┐
-     │ Multi-Chain RPC │
-     └────────────────┘
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xWalletAddress"
 ```
 
-All integrations are fully hosted and maintained — no setup or local infrastructure required.
+Done. You get everything back in 1-2 seconds, normalized, with risk scores calculated.
+
+**Time required:** 5 minutes to get your first response.
+
+**Maintenance burden:** Zero. We handle protocol upgrades.
+
+**Data freshness:** Real-time. We query the blockchain directly.
 
 ---
 
-## 📊 Benchmarks
+## Quick Example
 
-| Scenario                   | Avg Response       | Description             |
-| -------------------------- | ------------------ | ----------------------- |
-| Cached query               | **≈50 ms**         | Pre-aggregated response |
-| Uncached (live)            | **2-4 s**          | RPC-level fetch         |
-| All protocols, multi-chain | **<100 ms cached** | Aggregated API call     |
+Here's what you get back for a real wallet with $2.2B in DeFi positions:
 
----
+```json
+{
+  "defi_score": 467,
+  "risk_level": "High Risk",
+  "total_collateral_usd": 2175957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  
+  "risk_factors": [
+    {
+      "severity": "critical",
+      "factor": "Imminent Liquidation Risk",
+      "description": "Health factor 1.067 means liquidation occurs if collateral drops 6.7%"
+    }
+  ],
+  
+  "recommendations": {
+    "immediate": [
+      "URGENT: Deposit $387M additional collateral OR repay debt to raise health factor above 1.5"
+    ],
+    "short_term": [
+      "Diversify collateral across multiple assets to reduce concentration risk"
+    ],
+    "long_term": [
+      "Target health factor above 2.0 for safety margin during market volatility"
+    ]
+  },
+  
+  "positions": [
+    {
+      "protocol": "Aave V3",
+      "chain": "Ethereum",
+      "collateral_usd": 1200000000,
+      "borrowed_usd": 1050000000,
+      "health_factor": 1.05,
+      "assets": { ... }
+    }
+  ]
+}
+```
 
-## 🔒 Security & Reliability
-
-* API-key authentication
-* Rate-limiting and monitoring
-* Fallback RPC infrastructure
-* HTTPS-only endpoints
-* No user data stored
-
----
-
-## 🧭 Roadmap
-
-**v1.0 (Current)**
-✅ Multi-protocol aggregation
-✅ Cross-chain normalization
-✅ Portfolio risk API
-✅ Full documentation
-
-**v1.1 (Upcoming)**
-🔜 Historical position tracking
-🔜 Webhooks and alerts
-🔜 GraphQL endpoint
-🔜 New protocol integrations
-
-**v2.0 (Future)**
-🧩 Liquidity pool aggregation
-📈 Yield & staking analytics
-📱 Mobile SDKs
-
-[Full roadmap →](https://docs.kixago.com/roadmap)
-
----
-
-## 📖 Documentation
-
-* [Getting Started Guide](https://docs.kixago.com)
-* [API Reference](https://docs.kixago.com/api)
-* [Code Examples](https://docs.kixago.com/examples)
-* [Whitepaper](https://docs.kixago.com/whitepaper)
+That's a real response. Wallet `0xf0bb20865277aBd641a307eCe5Ee04E79073416C` if you want to verify.
 
 ---
 
-## 💬 Community & Support
+## Who Uses This
 
-* [GitHub Issues](https://github.com/kixago/defi-aggregator-api/issues)
-* [Discussions](https://github.com/kixago/defi-aggregator-api/discussions)
-* Email: **[support@kixago.com](mailto:support@kixago.com)**
-* Discord: *(coming soon)*
+### If you're a developer
+
+You're building something that needs DeFi position data. Maybe a portfolio tracker, maybe a liquidation bot, maybe a risk dashboard. You don't want to spend months integrating protocols when you could be building features.
+
+```typescript
+// Your entire DeFi integration layer
+const profile = await kixago.getRiskProfile(walletAddress);
+
+if (profile.defi_score < 550) {
+  alertUser("High liquidation risk detected");
+}
+```
+
+**Use cases:**
+- DeFi dashboards and portfolio trackers
+- Liquidation monitoring and MEV bots  
+- Risk management tools
+- Multi-chain wallet analytics
+- Lending protocol frontends
+
+### If you're making business decisions
+
+Your company deals with crypto-native customers or DeFi in some capacity. You need to verify positions, assess risk, or underwrite loans. The problem is DeFi positions are invisible to traditional finance.
+
+**Use cases:**
+- **Banks/Lenders:** Verify a borrower's $10M DeFi collateral before approving a loan
+- **Wealth Advisors:** Monitor client DeFi positions and provide risk management advice
+- **Trading Firms:** Identify liquidation opportunities across thousands of wallets
+- **Fund Managers:** Track DeFi exposure across portfolio companies
+
+**Example:** A borrower applies for a $1M loan and claims they have $5M in DeFi collateral. You call our API with their wallet address and get back their complete risk profile in 2 seconds. You can verify their collateral, see their health factors, and assess liquidation risk before making a decision.
+
+Traditional finance has had credit bureaus for decades. DeFi didn't. Now it does.
 
 ---
 
-## 📄 License
+## How Credit Scoring Works
 
-**MIT License** — see [LICENSE](LICENSE).
-You’re free to use the API and examples for commercial or open-source projects.
+We use a 5-factor model that evaluates:
+
+| Factor | Weight | What It Measures |
+|--------|--------|------------------|
+| Health Factor | 40% | How close to liquidation (most critical metric) |
+| Leverage Ratio | 30% | Debt-to-collateral ratio (LTV) |
+| Diversification | 15% | Concentration risk across assets and protocols |
+| Volatility Exposure | 10% | Risk from holding volatile collateral |
+| Protocol Risk | 5% | Smart contract maturity and audit history |
+
+The final score maps to a 300-850 range (like FICO):
+
+- **750-850** - Very Low Risk: Healthy positions, plenty of collateral buffer
+- **650-749** - Low Risk: Conservative borrowing, monitoring recommended  
+- **550-649** - Medium Risk: Moderate leverage, watch closely
+- **450-549** - High Risk: Approaching danger zone, reduce leverage soon
+- **300-449** - Very High Risk: Imminent liquidation risk, take action immediately
+
+**Why these weights?** Health factor is weighted highest (40%) because it's the single metric that determines liquidation. Below 1.0 means instant liquidation regardless of anything else. LTV is second (30%) because it determines buffer room before hitting that threshold.
+
+[Full scoring methodology in the docs →](https://docs.kixago.com/docs/scoring)
 
 ---
 
-<div align="center">
+## What We Cover
 
-### ⭐ If Kixago saves you time, please star this repo!
+### Protocols
+- ✅ Aave V2 (Ethereum, Polygon)
+- ✅ Aave V3 (Ethereum, Base, Arbitrum, Polygon)
+- ✅ Compound V2 (Ethereum)
+- ✅ Compound V3 (Ethereum, Base, Arbitrum, Polygon)
+- ✅ MakerDAO (Ethereum)
+- Coming: Morpho, Spark, Euler
 
-**[Docs](https://docs.kixago.com)** • **[Examples](https://docs.kixago.com/examples)** • **[API](https://api.kixago.com)**
+### Chains
+- ✅ Ethereum (own node infrastructure)
+- ✅ Base (own node infrastructure)
+- ✅ Arbitrum (Alchemy)
+- ✅ Polygon (Alchemy)
+- Coming: Optimism, Avalanche, Solana
 
-</div>
+### Data Points
+- ✅ Total collateral (USD-normalized)
+- ✅ Total borrowed (USD-normalized)
+- ✅ Health factors (per-position and global)
+- ✅ LTV ratios
+- ✅ Individual asset breakdowns
+- ✅ Liquidation price calculations
+- ✅ Risk factor analysis with severity levels
+
+---
+
+## API Overview
+
+Base endpoint: `https://api.kixago.com/v1`
+
+### Get Risk Profile
+```bash
+GET /risk-profile/{address}
+
+# Example
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/vitalik.eth"
+```
+
+Returns complete credit analysis including score, positions, risk factors, and recommendations.
+
+### Get Positions Only
+```bash
+GET /positions/{address}
+
+# Example  
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.kixago.com/v1/positions/0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+```
+
+Returns just the position data without scoring (faster if you just need balances).
+
+[Full API reference →](https://docs.kixago.com/docs/api)
+
+---
+
+## SDKs and Code Examples
+
+### Official SDKs
+We're building official client libraries. They're not ready yet but will be soon:
+
+- TypeScript/JavaScript SDK (Q2 2025)
+- Python SDK (Q2 2025)  
+- Go SDK (Q3 2025)
+
+For now, it's just HTTP requests. The API is straightforward REST, so any HTTP client works.
+
+### Community Examples
+
+Check out the [examples directory](https://github.com/kixago/examples) for:
+- Next.js dashboard template
+- Liquidation monitoring bot
+- Telegram alert bot
+- Python risk analyzer
+
+If you build something useful, submit a PR and we'll feature it.
+
+---
+
+## Running This Documentation Locally
+
+This is a Docusaurus site. Clone and run:
+
+```bash
+git clone https://github.com/kixago/docs.git
+cd docs
+npm install
+npm start
+```
+
+Visit `http://localhost:3000`
+
+### Contributing
+
+Found a typo? See outdated info? Want to add an example?
+
+- Report issues: [github.com/kixago/docs/issues](https://github.com/kixago/docs/issues)
+- Submit fixes: [github.com/kixago/docs/pulls](https://github.com/kixago/docs/pulls)
+- Discuss features: [github.com/kixago/docs/discussions](https://github.com/kixago/docs/discussions)
+
+We review PRs quickly and appreciate any help making the docs better.
+
+---
+
+## Pricing
+
+| Tier | Cost | Requests/Month | Who It's For |
+|------|------|----------------|--------------|
+| Developer | Free | 10,000 | Testing, side projects, indie devs |
+| Startup | $49/mo | 100,000 | Production apps, bots, small teams |
+| Institution | $499/mo | 1,000,000 | Banks, advisors, trading firms |
+| Enterprise | Custom | Unlimited | High volume, compliance needs, on-premise |
+
+Free tier is actually free. No credit card required, no surprise charges. When you hit the limit, requests fail gracefully with a 429 status code.
+
+[Full pricing details →](https://kixago.com/pricing)
+
+---
+
+## Roadmap
+
+### Currently Available
+- ✅ 5 protocols across 4 chains
+- ✅ Credit scoring (300-850 range)
+- ✅ REST API with OpenAPI spec
+- ✅ Real-time data (1-2s response)
+- ✅ Complete documentation
+
+### Next 3-6 Months (Q2-Q3 2025)
+- TypeScript and Python SDKs
+- Historical score tracking
+- Webhook alerts for health factor changes
+- Yield optimization suggestions
+- Additional protocols (Morpho, Spark, Euler)
+- Additional chains (Optimism, Avalanche)
+
+### Later (Q4 2025+)
+- PDF credit reports
+- Multi-wallet portfolio tracking
+- Custom scoring model weights
+- On-premise deployment option
+- SSO and role-based access
+
+We ship regularly. Follow [@kixago](https://twitter.com/kixago) for updates.
+
+---
+
+## Technical Details
+
+### How We Get The Data
+
+We run our own Ethereum and Base nodes. For other chains, we use Alchemy. All queries go directly to the blockchain in real-time - we're not using indexed data that's hours or days old.
+
+When you request a risk profile:
+1. We query all protocols on all chains in parallel
+2. Decode the responses using protocol-specific ABIs
+3. Normalize everything to USD using Chainlink + CoinDesk price feeds
+4. Calculate health factors and risk scores
+5. Generate recommendations based on the analysis
+6. Cache the result for 30 seconds
+
+Total time: 1-2 seconds on average.
+
+### Rate Limits
+
+Free tier: 10,000 requests/month, max 10 requests/second  
+Paid tiers: See pricing page
+
+If you hit the rate limit, you get a `429 Too Many Requests` with a `Retry-After` header.
+
+### Error Handling
+
+We return standard HTTP status codes with helpful error messages:
+
+```json
+{
+  "error": "INVALID_ADDRESS",
+  "message": "Address must be a valid Ethereum address or ENS name",
+  "status": 400
+}
+```
+
+Common errors are documented in the API reference.
+
+---
+
+## Support and Community
+
+- **Documentation:** [docs.kixago.com](https://docs.kixago.com)
+- **API Status:** [status.kixago.com](https://status.kixago.com)  
+- **Email:** hello@kixago.com
+- **Twitter:** [@kixago](https://twitter.com/kixago)
+- **GitHub Issues:** [github.com/kixago/docs/issues](https://github.com/kixago/docs/issues)
+
+For API issues or bugs, GitHub issues are fastest. For business inquiries, use email.
+
+---
+
+## License
+
+This documentation is MIT licensed. The Kixago API itself is proprietary - see [Terms of Service](https://kixago.com/terms).
+
+---
+
+## Acknowledgments
+
+Built with [Docusaurus](https://docusaurus.io).
+
+Thanks to the teams behind Aave, Compound, and MakerDAO for building great protocols and maintaining solid documentation.
+
+---
+
+**Built by developers who got tired of rebuilding the same DeFi integrations over and over.**
+
+[Get Started](https://docs.kixago.com/docs/intro) • [Get API Key](https://kixago.com/dashboard) • [View API Reference](https://docs.kixago.com/docs/api)
+
+---

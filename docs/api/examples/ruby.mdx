@@ -1,0 +1,1084 @@
+---
+sidebar_position: 7
+title: "Ruby Examples"
+description: "Complete Ruby and Rails code examples"
+---
+
+# Ruby Examples
+
+Complete, production-ready code examples for integrating Kixago API in Ruby and Ruby on Rails applications.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# Add to Gemfile
+gem 'httparty'           # HTTP client
+gem 'dotenv-rails'       # Environment variables
+gem 'redis'              # Caching
+gem 'connection_pool'    # Connection pooling
+
+# Optional: For Rails
+gem 'rails', '~> 7.1'
+
+# Optional: For background jobs
+gem 'sidekiq'
+
+# Install
+bundle install
+```
+
+### Environment Setup
+
+```bash
+# .env
+KIXAGO_API_KEY=kixakey_your_key_here
+KIXAGO_BASE_URL=https://api.kixago.com
+REDIS_URL=redis://localhost:6379/0
+```
+
+```ruby
+# Load environment variables
+require 'dotenv/load'
+```
+
+---
+
+## Basic Examples (Plain Ruby)
+
+### Example 1: Simple Request
+
+```ruby
+# kixago_example.rb
+require 'httparty'
+require 'json'
+require 'dotenv/load'
+
+class KixagoExample
+  def self.run
+    api_key = ENV['KIXAGO_API_KEY']
+    wallet_address = '0xf0bb20865277aBd641a307eCe5Ee04E79073416C'
+    
+    response = HTTParty.get(
+      "https://api.kixago.com/v1/risk-profile/#{wallet_address}",
+      headers: {
+        'X-API-Key' => api_key,
+        'Accept' => 'application/json'
+      },
+      timeout: 30
+    )
+    
+    if response.success?
+      profile = response.parsed_response
+      
+      puts "DeFi Score: #{profile['defi_score']['defi_score']}"
+      puts "Risk Level: #{profile['defi_score']['risk_level']}"
+      puts "Health Factor: #{profile['global_health_factor'].round(2)}"
+    else
+      puts "Error: #{response.code}"
+    end
+  end
+end
+
+KixagoExample.run
+```
+
+---
+
+### Example 2: Type-Safe Models (Plain Ruby)
+
+```ruby
+# lib/kixago/models/token_detail.rb
+module Kixago
+  module Models
+    class TokenDetail
+      attr_accessor :token, :amount, :usd_value, :token_address
+      
+      def initialize(data)
+        @token = data['token']
+        @amount = data['amount'].to_f
+        @usd_value = data['usd_value'].to_f
+        @token_address = data['token_address']
+      end
+    end
+    
+    # lib/kixago/models/lending_position.rb
+    class LendingPosition
+      attr_accessor :protocol, :protocol_version, :chain, :user_address,
+                    :collateral_usd, :borrowed_usd, :health_factor,
+                    :ltv_current, :is_at_risk, :collateral_details,
+                    :borrowed_details, :last_updated
+      
+      def initialize(data)
+        @protocol = data['protocol']
+        @protocol_version = data['protocol_version']
+        @chain = data['chain']
+        @user_address = data['user_address']
+        @collateral_usd = BigDecimal(data['collateral_usd'].to_s)
+        @borrowed_usd = BigDecimal(data['borrowed_usd'].to_s)
+        @health_factor = data['health_factor'].to_f
+        @ltv_current = data['ltv_current'].to_f
+        @is_at_risk = data['is_at_risk']
+        @collateral_details = parse_token_details(data['collateral_details'])
+        @borrowed_details = parse_token_details(data['borrowed_details'])
+        @last_updated = Time.parse(data['last_updated'])
+      end
+      
+      private
+      
+      def parse_token_details(details)
+        return [] if details.nil?
+        details.map { |d| TokenDetail.new(d) }
+      end
+    end
+    
+    # lib/kixago/models/defi_score.rb
+    class DeFiScore
+      attr_accessor :score, :risk_level, :risk_category, :color,
+                    :score_breakdown, :risk_factors, :recommendations,
+                    :liquidation_simulation, :calculated_at
+      
+      def initialize(data)
+        @score = data['defi_score']
+        @risk_level = data['risk_level']
+        @risk_category = data['risk_category']
+        @color = data['color']
+        @score_breakdown = data['score_breakdown']
+        @risk_factors = data['risk_factors'] || []
+        @recommendations = data['recommendations'] || {}
+        @liquidation_simulation = data['liquidation_simulation']
+        @calculated_at = Time.parse(data['calculated_at'])
+      end
+    end
+    
+    # lib/kixago/models/risk_profile_response.rb
+    class RiskProfileResponse
+      attr_accessor :wallet_address, :total_collateral_usd, :total_borrowed_usd,
+                    :global_health_factor, :global_ltv, :positions_at_risk_count,
+                    :last_updated, :aggregation_duration, :lending_positions,
+                    :defi_score, :aggregation_errors
+      
+      def initialize(data)
+        @wallet_address = data['wallet_address']
+        @total_collateral_usd = BigDecimal(data['total_collateral_usd'].to_s)
+        @total_borrowed_usd = BigDecimal(data['total_borrowed_usd'].to_s)
+        @global_health_factor = data['global_health_factor'].to_f
+        @global_ltv = data['global_ltv'].to_f
+        @positions_at_risk_count = data['positions_at_risk_count']
+        @last_updated = Time.parse(data['last_updated'])
+        @aggregation_duration = data['aggregation_duration']
+        @lending_positions = parse_positions(data['lending_positions'])
+        @defi_score = data['defi_score'] ? DeFiScore.new(data['defi_score']) : nil
+        @aggregation_errors = data['aggregation_errors'] || {}
+      end
+      
+      private
+      
+      def parse_positions(positions)
+        positions.map { |p| LendingPosition.new(p) }
+      end
+    end
+  end
+end
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```ruby
+# lib/kixago/client.rb
+require 'httparty'
+require 'logger'
+
+module Kixago
+  class Error < StandardError
+    attr_reader :status_code
+    
+    def initialize(message, status_code = nil)
+      super(message)
+      @status_code = status_code
+    end
+  end
+  
+  class Client
+    include HTTParty
+    
+    attr_reader :api_key, :base_uri, :logger
+    
+    def initialize(api_key, base_uri: 'https://api.kixago.com', logger: nil)
+      @api_key = api_key
+      @base_uri = base_uri
+      @logger = logger || Logger.new($stdout)
+      
+      self.class.base_uri @base_uri
+      self.class.default_timeout 30
+    end
+    
+    def get_risk_profile(wallet_address)
+      raise ArgumentError, 'Wallet address cannot be empty' if wallet_address.nil? || wallet_address.empty?
+      
+      logger.info("Fetching risk profile for #{wallet_address}")
+      
+      response = self.class.get(
+        "/v1/risk-profile/#{wallet_address}",
+        headers: {
+          'X-API-Key' => api_key,
+          'Accept' => 'application/json'
+        }
+      )
+      
+      handle_response(response)
+      
+    rescue HTTParty::Error => e
+      raise Error.new("Request failed: #{e.message}")
+    rescue Timeout::Error => e
+      raise Error.new("Request timed out: #{e.message}")
+    end
+    
+    private
+    
+    def handle_response(response)
+      case response.code
+      when 200
+        data = response.parsed_response
+        
+        # Warn about partial failures
+        if data['aggregation_errors'] && !data['aggregation_errors'].empty?
+          logger.warn("⚠️ Partial failure: #{data['aggregation_errors'].keys.join(', ')}")
+        end
+        
+        Models::RiskProfileResponse.new(data)
+        
+      when 400
+        error_message = response.parsed_response['error'] || 'Bad request'
+        raise Error.new("Invalid request: #{error_message}", 400)
+        
+      when 401
+        raise Error.new('Invalid API key', 401)
+        
+      when 429
+        retry_after = response.headers['retry-after'] || 5
+        raise Error.new("Rate limit exceeded - retry after #{retry_after}s", 429)
+        
+      when 500
+        raise Error.new('Server error', 500)
+        
+      else
+        error_message = response.parsed_response['error'] rescue 'Unknown error'
+        raise Error.new("HTTP #{response.code}: #{error_message}", response.code)
+      end
+    end
+  end
+end
+
+# Usage
+client = Kixago::Client.new(ENV['KIXAGO_API_KEY'])
+
+begin
+  profile = client.get_risk_profile('0xf0bb20865277aBd641a307eCe5Ee04E79073416C')
+  
+  puts "DeFi Score: #{profile.defi_score.score}"
+  puts "Risk Level: #{profile.defi_score.risk_level}"
+  puts "Health Factor: #{profile.global_health_factor.round(2)}"
+  
+rescue Kixago::Error => e
+  puts "Error (#{e.status_code}): #{e.message}"
+end
+```
+
+---
+
+## Ruby on Rails Integration
+
+### Example 4: Rails Service
+
+```ruby
+# app/services/kixago_service.rb
+class KixagoService
+  def initialize
+    @client = Kixago::Client.new(
+      Rails.application.credentials.dig(:kixago, :api_key),
+      base_uri: Rails.application.config.kixago_base_url
+    )
+  end
+  
+  def get_risk_profile(wallet_address)
+    cache_key = "kixago:profile:#{wallet_address}"
+    
+    Rails.cache.fetch(cache_key, expires_in: 30.seconds) do
+      Rails.logger.info("Cache MISS - fetching from API: #{wallet_address}")
+      @client.get_risk_profile(wallet_address)
+    end
+  end
+end
+
+# config/application.rb
+module YourApp
+  class Application < Rails::Application
+    config.kixago_base_url = ENV.fetch('KIXAGO_BASE_URL', 'https://api.kixago.com')
+    
+    # Configure cache store (Redis)
+    config.cache_store = :redis_cache_store, {
+      url: ENV['REDIS_URL'],
+      expires_in: 30.seconds,
+      namespace: 'kixago'
+    }
+  end
+end
+
+# config/credentials.yml.enc (edit with: rails credentials:edit)
+# kixago:
+#   api_key: kixakey_your_key_here
+```
+
+---
+
+### Example 5: Rails Controller
+
+```ruby
+# app/controllers/api/wallets_controller.rb
+module Api
+  class WalletsController < ApplicationController
+    before_action :set_kixago_service
+    
+    # GET /api/wallets/:address
+    def show
+      @profile = @kixago_service.get_risk_profile(params[:address])
+      render json: @profile
+      
+    rescue Kixago::Error => e
+      render json: { error: e.message }, status: e.status_code || 500
+    rescue ArgumentError => e
+      render json: { error: e.message }, status: :bad_request
+    end
+    
+    private
+    
+    def set_kixago_service
+      @kixago_service = KixagoService.new
+    end
+  end
+end
+
+# config/routes.rb
+Rails.application.routes.draw do
+  namespace :api do
+    resources :wallets, only: [:show], param: :address
+  end
+end
+```
+
+---
+
+### Example 6: Rails Serializer (Active Model Serializers)
+
+```ruby
+# app/serializers/risk_profile_serializer.rb
+class RiskProfileSerializer < ActiveModel::Serializer
+  attributes :wallet_address, :total_collateral_usd, :total_borrowed_usd,
+             :global_health_factor, :global_ltv, :positions_at_risk_count,
+             :last_updated, :aggregation_duration
+  
+  has_one :defi_score
+  has_many :lending_positions
+  
+  attribute :aggregation_errors, if: :has_errors?
+  
+  def has_errors?
+    object.aggregation_errors && !object.aggregation_errors.empty?
+  end
+end
+
+# app/serializers/defi_score_serializer.rb
+class DeFiScoreSerializer < ActiveModel::Serializer
+  attributes :score, :risk_level, :risk_category, :color,
+             :score_breakdown, :risk_factors, :recommendations,
+             :liquidation_simulation, :calculated_at
+end
+
+# Usage in controller
+def show
+  @profile = @kixago_service.get_risk_profile(params[:address])
+  render json: @profile, serializer: RiskProfileSerializer
+end
+```
+
+---
+
+## Caching Implementation
+
+### Example 7: Redis Cache with Connection Pool
+
+```ruby
+# lib/kixago/cache.rb
+require 'redis'
+require 'connection_pool'
+require 'json'
+
+module Kixago
+  class Cache
+    def initialize(redis_url: ENV['REDIS_URL'], pool_size: 5)
+      @pool = ConnectionPool.new(size: pool_size, timeout: 5) do
+        Redis.new(url: redis_url)
+      end
+    end
+    
+    def fetch(key, ttl: 30, &block)
+      cached = get(key)
+      return cached if cached
+      
+      value = yield
+      set(key, value, ttl: ttl)
+      value
+    end
+    
+    def get(key)
+      @pool.with do |conn|
+        cached = conn.get("kixago:profile:#{key}")
+        return nil unless cached
+        
+        JSON.parse(cached)
+      end
+    rescue Redis::BaseError => e
+      Rails.logger.error("Redis error: #{e.message}")
+      nil
+    end
+    
+    def set(key, value, ttl: 30)
+      @pool.with do |conn|
+        conn.setex(
+          "kixago:profile:#{key}",
+          ttl,
+          value.to_json
+        )
+      end
+    rescue Redis::BaseError => e
+      Rails.logger.error("Redis cache write failed: #{e.message}")
+    end
+    
+    def delete(key)
+      @pool.with do |conn|
+        conn.del("kixago:profile:#{key}")
+      end
+    end
+  end
+end
+
+# app/services/cached_kixago_service.rb
+class CachedKixagoService
+  def initialize
+    @client = Kixago::Client.new(ENV['KIXAGO_API_KEY'])
+    @cache = Kixago::Cache.new
+  end
+  
+  def get_risk_profile(wallet_address)
+    @cache.fetch(wallet_address, ttl: 30) do
+      Rails.logger.info("Cache MISS - fetching: #{wallet_address}")
+      @client.get_risk_profile(wallet_address)
+    end
+  end
+end
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 8: Credit Underwriting Service
+
+```ruby
+# app/services/underwriting_service.rb
+class UnderwritingService
+  class Decision
+    APPROVED = 'approved'
+    DECLINED = 'declined'
+    MANUAL_REVIEW = 'manual_review'
+  end
+  
+  attr_reader :kixago_service
+  
+  def initialize
+    @kixago_service = KixagoService.new
+  end
+  
+  def underwrite(wallet_address, requested_loan_amount)
+    profile = kixago_service.get_risk_profile(wallet_address)
+    
+    # Check if wallet has DeFi history
+    return decline('No DeFi lending history found') unless profile.defi_score
+    
+    score = profile.defi_score.score
+    risk_category = profile.defi_score.risk_category
+    health_factor = profile.global_health_factor
+    collateral = profile.total_collateral_usd
+    
+    # Rule 1: Minimum credit score
+    return decline("DeFi credit score too low: #{score}", score) if score < 550
+    
+    # Rule 2: Health factor requirement
+    if health_factor.positive? && health_factor < 1.5
+      return decline("Health factor too low: #{health_factor.round(2)} (minimum 1.5)", score)
+    end
+    
+    # Rule 3: Collateral requirement (2x loan amount)
+    min_collateral = requested_loan_amount * 2
+    if collateral < min_collateral
+      return decline(
+        "Insufficient collateral. Need $#{min_collateral.round}, have $#{collateral.round}",
+        score
+      )
+    end
+    
+    # Rule 4: Risk category checks
+    if risk_category == 'URGENT_ACTION_REQUIRED'
+      return decline('Critical risk factors detected - imminent liquidation risk', score, risk_category)
+    end
+    
+    if risk_category == 'HIGH_RISK'
+      return manual_review(
+        'High risk category - requires underwriter review',
+        score,
+        risk_category,
+        conditions: profile.defi_score.recommendations['immediate']
+      )
+    end
+    
+    # Calculate max loan amount (50% of collateral)
+    max_loan = collateral * BigDecimal('0.5')
+    
+    if requested_loan_amount > max_loan
+      return manual_review(
+        'Requested amount exceeds max (50% of collateral)',
+        score,
+        risk_category,
+        max_loan_amount: max_loan
+      )
+    end
+    
+    # APPROVED!
+    approve(
+      "Strong DeFi profile - Score #{score}, Risk: #{risk_category}",
+      score,
+      risk_category,
+      max_loan
+    )
+    
+  rescue Kixago::Error => e
+    Rails.logger.error("Underwriting error: #{e.message}")
+    manual_review('Error fetching DeFi profile - manual review required')
+  end
+  
+  private
+  
+  def approve(reason, score, risk_category, max_loan_amount)
+    UnderwritingResult.new(
+      decision: Decision::APPROVED,
+      reason: reason,
+      defi_score: score,
+      risk_category: risk_category,
+      max_loan_amount: max_loan_amount
+    )
+  end
+  
+  def decline(reason, score = nil, risk_category = nil)
+    UnderwritingResult.new(
+      decision: Decision::DECLINED,
+      reason: reason,
+      defi_score: score,
+      risk_category: risk_category
+    )
+  end
+  
+  def manual_review(reason, score = nil, risk_category = nil, **options)
+    UnderwritingResult.new(
+      decision: Decision::MANUAL_REVIEW,
+      reason: reason,
+      defi_score: score,
+      risk_category: risk_category,
+      **options
+    )
+  end
+end
+
+# app/models/underwriting_result.rb
+class UnderwritingResult
+  attr_reader :decision, :reason, :defi_score, :risk_category,
+              :max_loan_amount, :conditions
+  
+  def initialize(decision:, reason:, defi_score: nil, risk_category: nil,
+                 max_loan_amount: nil, conditions: [])
+    @decision = decision
+    @reason = reason
+    @defi_score = defi_score
+    @risk_category = risk_category
+    @max_loan_amount = max_loan_amount
+    @conditions = conditions
+  end
+  
+  def approved?
+    decision == UnderwritingService::Decision::APPROVED
+  end
+  
+  def declined?
+    decision == UnderwritingService::Decision::DECLINED
+  end
+  
+  def needs_review?
+    decision == UnderwritingService::Decision::MANUAL_REVIEW
+  end
+end
+
+# app/controllers/api/underwriting_controller.rb
+class Api::UnderwritingController < ApplicationController
+  def create
+    service = UnderwritingService.new
+    result = service.underwrite(
+      params[:wallet_address],
+      BigDecimal(params[:loan_amount])
+    )
+    
+    render json: {
+      decision: result.decision,
+      reason: result.reason,
+      defi_score: result.defi_score,
+      risk_category: result.risk_category,
+      max_loan_amount: result.max_loan_amount,
+      conditions: result.conditions
+    }
+  end
+end
+```
+
+---
+
+## Background Jobs
+
+### Example 9: Sidekiq Job for Monitoring
+
+```ruby
+# app/jobs/liquidation_monitor_job.rb
+class LiquidationMonitorJob
+  include Sidekiq::Job
+  
+  sidekiq_options retry: 3, queue: :monitoring
+  
+  def perform
+    wallets = Rails.application.config.monitored_wallets
+    
+    Rails.logger.info("Monitoring #{wallets.size} wallets for liquidation risk")
+    
+    alerts = []
+    service = KixagoService.new
+    
+    wallets.each do |wallet|
+      profile = service.get_risk_profile(wallet)
+      
+      next unless profile.defi_score
+      next if profile.total_collateral_usd.zero?
+      
+      buffer = BigDecimal(profile.defi_score.liquidation_simulation['buffer_percentage'].to_s)
+      
+      if buffer < 5
+        alerts << {
+          wallet: wallet,
+          urgency: 'CRITICAL',
+          buffer: buffer,
+          collateral: profile.total_collateral_usd,
+          message: "🚨 CRITICAL: Only #{buffer.round(1)}% buffer remaining!"
+        }
+        
+        Rails.logger.error("CRITICAL: #{wallet} - #{buffer}% buffer")
+        
+      elsif buffer < 10
+        alerts << {
+          wallet: wallet,
+          urgency: 'HIGH',
+          buffer: buffer,
+          collateral: profile.total_collateral_usd,
+          message: "⚠️ HIGH RISK: #{buffer.round(1)}% buffer"
+        }
+        
+        Rails.logger.warn("HIGH: #{wallet} - #{buffer}% buffer")
+      end
+      
+    rescue Kixago::Error => e
+      Rails.logger.error("Error monitoring #{wallet}: #{e.message}")
+    end
+    
+    send_alerts(alerts) if alerts.any?
+    
+    Rails.logger.info("Monitoring complete. Found #{alerts.size} alerts.")
+  end
+  
+  private
+  
+  def send_alerts(alerts)
+    # Send to Slack, email, etc.
+    alerts.each do |alert|
+      if alert[:urgency] == 'CRITICAL'
+        SlackNotifier.notify_critical(alert)
+      end
+    end
+  end
+end
+
+# config/sidekiq.yml
+:queues:
+  - [monitoring, 5]
+  - [default, 1]
+
+# Schedule the job (using sidekiq-scheduler gem)
+# config/sidekiq_schedule.yml
+liquidation_monitor:
+  cron: '*/5 * * * *'  # Every 5 minutes
+  class: LiquidationMonitorJob
+```
+
+---
+
+### Example 10: Rake Task
+
+```ruby
+# lib/tasks/kixago.rake
+namespace :kixago do
+  desc 'Monitor wallets for liquidation risk'
+  task monitor: :environment do
+    wallets = ENV['WALLETS']&.split(',') || Rails.application.config.monitored_wallets
+    
+    puts "Monitoring #{wallets.size} wallets..."
+    
+    service = KixagoService.new
+    
+    wallets.each do |wallet|
+      profile = service.get_risk_profile(wallet)
+      
+      next unless profile.defi_score
+      
+      buffer = profile.defi_score.liquidation_simulation['buffer_percentage']
+      
+      if buffer < 10
+        puts "⚠️ #{wallet}: #{buffer.round(1)}% buffer - AT RISK!"
+      else
+        puts "✅ #{wallet}: #{buffer.round(1)}% buffer - OK"
+      end
+      
+    rescue Kixago::Error => e
+      puts "❌ #{wallet}: Error - #{e.message}"
+    end
+  end
+  
+  desc 'Get risk profile for a specific wallet'
+  task :profile, [:address] => :environment do |t, args|
+    raise ArgumentError, 'Usage: rake kixago:profile[0xAddress]' unless args.address
+    
+    service = KixagoService.new
+    profile = service.get_risk_profile(args.address)
+    
+    puts "\n=== RISK PROFILE ==="
+    puts "Wallet: #{profile.wallet_address}"
+    puts "DeFi Score: #{profile.defi_score&.score || 'N/A'}"
+    puts "Risk Level: #{profile.defi_score&.risk_level || 'N/A'}"
+    puts "Health Factor: #{profile.global_health_factor.round(2)}"
+    puts "Total Collateral: $#{profile.total_collateral_usd.round}"
+    puts "Total Debt: $#{profile.total_borrowed_usd.round}"
+    puts "LTV: #{profile.global_ltv.round(1)}%"
+    puts "\nPositions: #{profile.lending_positions.size}"
+    
+    profile.lending_positions.each do |pos|
+      puts "  - #{pos.protocol} #{pos.protocol_version} on #{pos.chain}"
+      puts "    Collateral: $#{pos.collateral_usd.round}"
+      puts "    Debt: $#{pos.borrowed_usd.round}"
+      puts "    Health Factor: #{pos.health_factor.round(3)}"
+      puts "    At Risk: #{pos.is_at_risk ? '⚠️ YES' : '✅ No'}"
+    end
+    
+  rescue Kixago::Error => e
+    puts "Error: #{e.message}"
+  end
+end
+
+# Usage:
+# rake kixago:monitor
+# rake kixago:profile[0xf0bb20865277aBd641a307eCe5Ee04E79073416C]
+```
+
+---
+
+## Testing
+
+### Example 11: RSpec Tests
+
+```ruby
+# spec/lib/kixago/client_spec.rb
+require 'rails_helper'
+
+RSpec.describe Kixago::Client do
+  let(:api_key) { 'test-api-key' }
+  let(:client) { described_class.new(api_key) }
+  let(:wallet_address) { '0xf0bb20865277aBd641a307eCe5Ee04E79073416C' }
+  
+  describe '#get_risk_profile' do
+    context 'with valid address' do
+      let(:mock_response) do
+        {
+          'wallet_address' => wallet_address,
+          'total_collateral_usd' => '100000.0',
+          'total_borrowed_usd' => '30000.0',
+          'global_health_factor' => 3.2,
+          'global_ltv' => 30.0,
+          'positions_at_risk_count' => 0,
+          'last_updated' => Time.now.iso8601,
+          'aggregation_duration' => '1.234s',
+          'lending_positions' => [],
+          'defi_score' => {
+            'defi_score' => 750,
+            'risk_level' => 'Very Low Risk',
+            'risk_category' => 'VERY_LOW_RISK',
+            'color' => 'green',
+            'score_breakdown' => {},
+            'risk_factors' => [],
+            'recommendations' => {},
+            'liquidation_simulation' => {},
+            'calculated_at' => Time.now.iso8601
+          }
+        }
+      end
+      
+      before do
+        stub_request(:get, "https://api.kixago.com/v1/risk-profile/#{wallet_address}")
+          .with(headers: { 'X-API-Key' => api_key })
+          .to_return(
+            status: 200,
+            body: mock_response.to_json,
+            headers: { 'Content-Type' => 'application/json' }
+          )
+      end
+      
+      it 'returns a RiskProfileResponse' do
+        profile = client.get_risk_profile(wallet_address)
+        
+        expect(profile).to be_a(Kixago::Models::RiskProfileResponse)
+        expect(profile.wallet_address).to eq(wallet_address)
+        expect(profile.defi_score.score).to eq(750)
+      end
+    end
+    
+    context 'with invalid API key' do
+      before do
+        stub_request(:get, "https://api.kixago.com/v1/risk-profile/#{wallet_address}")
+          .to_return(
+            status: 401,
+            body: { error: 'Invalid API key' }.to_json
+          )
+      end
+      
+      it 'raises an error' do
+        expect {
+          client.get_risk_profile(wallet_address)
+        }.to raise_error(Kixago::Error, /Invalid API key/)
+      end
+    end
+    
+    context 'with empty address' do
+      it 'raises ArgumentError' do
+        expect {
+          client.get_risk_profile('')
+        }.to raise_error(ArgumentError, /cannot be empty/)
+      end
+    end
+  end
+end
+
+# spec/services/underwriting_service_spec.rb
+require 'rails_helper'
+
+RSpec.describe UnderwritingService do
+  let(:service) { described_class.new }
+  let(:wallet_address) { '0xTest123' }
+  let(:loan_amount) { BigDecimal('10000') }
+  
+  describe '#underwrite' do
+    let(:mock_profile) { instance_double(Kixago::Models::RiskProfileResponse) }
+    let(:mock_score) { instance_double(Kixago::Models::DeFiScore) }
+    
+    before do
+      allow_any_instance_of(KixagoService)
+        .to receive(:get_risk_profile)
+        .with(wallet_address)
+        .and_return(mock_profile)
+      
+      allow(mock_profile).to receive(:defi_score).and_return(mock_score)
+      allow(mock_profile).to receive(:global_health_factor).and_return(3.2)
+      allow(mock_profile).to receive(:total_collateral_usd).and_return(BigDecimal('100000'))
+    end
+    
+    context 'with high credit score' do
+      before do
+        allow(mock_score).to receive(:score).and_return(750)
+        allow(mock_score).to receive(:risk_category).and_return('LOW_RISK')
+      end
+      
+      it 'approves the loan' do
+        result = service.underwrite(wallet_address, loan_amount)
+        
+        expect(result.decision).to eq(UnderwritingService::Decision::APPROVED)
+        expect(result.defi_score).to eq(750)
+      end
+    end
+    
+    context 'with low credit score' do
+      before do
+        allow(mock_score).to receive(:score).and_return(400)
+      end
+      
+      it 'declines the loan' do
+        result = service.underwrite(wallet_address, loan_amount)
+        
+        expect(result.decision).to eq(UnderwritingService::Decision::DECLINED)
+        expect(result.reason).to include('too low')
+      end
+    end
+  end
+end
+
+# spec/controllers/api/wallets_controller_spec.rb
+require 'rails_helper'
+
+RSpec.describe Api::WalletsController, type: :controller do
+  let(:wallet_address) { '0xTest123' }
+  
+  describe 'GET #show' do
+    context 'with valid address' do
+      let(:mock_profile) { instance_double(Kixago::Models::RiskProfileResponse) }
+      
+      before do
+        allow_any_instance_of(KixagoService)
+          .to receive(:get_risk_profile)
+          .with(wallet_address)
+          .and_return(mock_profile)
+      end
+      
+      it 'returns success' do
+        get :show, params: { address: wallet_address }
+        
+        expect(response).to have_http_status(:success)
+      end
+    end
+    
+    context 'with invalid address' do
+      before do
+        allow_any_instance_of(KixagoService)
+          .to receive(:get_risk_profile)
+          .and_raise(Kixago::Error.new('Invalid address', 400))
+      end
+      
+      it 'returns error' do
+        get :show, params: { address: 'invalid' }
+        
+        expect(response).to have_http_status(400)
+        expect(JSON.parse(response.body)).to have_key('error')
+      end
+    end
+  end
+end
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use services for business logic** - Keep controllers thin
+- **Implement caching** - Redis with 30s TTL
+- **Use BigDecimal for money** - Never use Float
+- **Use environment variables** - Never commit API keys
+- **Structured logging** - Use Rails.logger with context
+- **Background jobs for monitoring** - Sidekiq or Resque
+- **Write tests** - RSpec with WebMock
+- **Use Rubocop** - Maintain code quality
+
+### ❌ DON'T
+
+- **Don't use Float for money** - Precision issues
+- **Don't expose API keys** - Use Rails credentials
+- **Don't ignore aggregation errors** - Log warnings
+- **Don't block web requests** - Use background jobs for monitoring
+- **Don't skip tests** - Test error cases too
+- **Don't hardcode URLs** - Use environment config
+
+---
+
+## Performance Tips
+
+### Concurrent Requests (Typhoeus)
+
+```ruby
+# Gemfile
+gem 'typhoeus'
+
+# app/services/batch_kixago_service.rb
+require 'typhoeus'
+
+class BatchKixagoService
+  def get_multiple_profiles(wallet_addresses)
+    hydra = Typhoeus::Hydra.new(max_concurrency: 10)
+    requests = {}
+    
+    wallet_addresses.each do |address|
+      request = Typhoeus::Request.new(
+        "https://api.kixago.com/v1/risk-profile/#{address}",
+        headers: {
+          'X-API-Key' => ENV['KIXAGO_API_KEY']
+        },
+        timeout: 30
+      )
+      
+      requests[address] = request
+      hydra.queue(request)
+    end
+    
+    hydra.run
+    
+    # Parse responses
+    requests.transform_values do |request|
+      if request.response.success?
+        JSON.parse(request.response.body)
+      else
+        { error: "HTTP #{request.response.code}" }
+      end
+    end
+  end
+end
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/java" className="button button--primary button--lg">
+    ☕ Java Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Ruby SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---

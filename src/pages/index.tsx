@@ -1,157 +1,144 @@
 import React from 'react';
-import clsx from 'clsx';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-// NOTE: I am using 'featuresData' to avoid conflict with the 'features' class name.
-// Ensure your array is named 'featuresData' at the top of the file.
-// If you see a 'cannot find featuresData' error, rename your original array to featuresData.
-
-// Feature data for the homepage
-const featuresData = [
-  {
-    title: 'One API, All Protocols',
-    icon: '📚',
-    description:
-      'Query Aave V2/V3, Compound V2/V3, and MakerDAO with a single, normalized endpoint. Stop building dozens of protocol-specific integrations.',
-  },
-  {
-    title: 'Multi-Chain by Default',
-    icon: '⚡',
-    description:
-      'Get instant, aggregated data across Ethereum, Polygon, Arbitrum, and Base. We handle the complexity of multi-chain routing and state decoding.',
-  },
-  {
-    title: 'Developer-First Experience',
-    icon: '🛠️',
-    description:
-      'Clear error handling, detailed OpenAPI specifications, and ready-to-use code examples ensure a smooth and predictable integration experience.',
-  },
-  {
-    title: 'Real-Time Protocol State',
-    icon: '🔄',
-    description:
-      'Direct blockchain queries with intelligent caching deliver sub-100ms responses for all your DeFi protocol position queries.',
-  },
-  {
-    title: 'Enterprise-Ready Infrastructure',
-    icon: '🏢',
-    description:
-      'Built on our own node infrastructure with 99.9% uptime SLA. No dependency on third-party RPC rate limits or availability.',
-  },
-  {
-    title: 'Comprehensive Documentation',
-    icon: '📖',
-    description:
-      'Detailed guides, working code examples in multiple languages, and interactive API reference powered by OpenAPI 3.1.',
-  },
-];
-
-// Type definition for Feature props
-interface FeatureProps {
-  title: string;
-  icon: string;
-  description: string;
-}
-
-// 💥 THE FIX IS HERE: Defining the component using React.FC ensures 'key' is handled internally.
-const Feature: React.FC<FeatureProps> = ({title, icon, description}) => {
-  return (
-    <div className={clsx('col col--4', 'feature')}>
-      <div className={'featureCard'}>
-        <div className={'featureIcon'}>{icon}</div>
-        <h3>{title}</h3>
-        <p>{description}</p>
-      </div>
-    </div>
-  );
-}
+import CodeBlock from '@theme/CodeBlock';
 
 function HomepageHeader() {
-  const {siteConfig} = useDocusaurusContext();
   return (
-    <header className={clsx('hero', 'heroBanner')}>
+    <header className="hero-banner">
       <div className="container">
-        <h1 className={'heroTitle'}>{siteConfig.title}</h1>
-        <p className={'heroSubtitle'}>{siteConfig.tagline}</p>
-        <div className={'buttons'}>
-          <Link
-            className="button button--primary button--lg"
-            to="/docs/intro">
-            Get Started - 5min ⚡
-          </Link>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/api">
-            View API Reference →
-          </Link>
+        <div className="hero-content">
+          <h1 className="hero-title">DeFi Credit Intelligence API</h1>
+          <p className="hero-subtitle">The FICO Score for Decentralized Finance</p>
+          <p className="hero-tagline">
+            One API call returns complete lending positions across Aave, Compound, and MakerDAO 
+            with FICO-style credit scores (300-850), liquidation risk analysis, and actionable recommendations.
+          </p>
+          <div className="hero-buttons">
+            <Link
+              className="button button--primary button--lg btn-hero-primary"
+              to="/docs/intro">
+              Get Started in 5 Minutes ⚡
+            </Link>
+            <Link
+              className="button button--secondary button--lg btn-hero-secondary"
+              to="/docs/api">
+              View API Reference →
+            </Link>
+          </div>
         </div>
       </div>
     </header>
   );
 }
 
-function QuickStartSection() {
+function FeatureSection() {
+  const features = [
+    {
+      title: 'One API, All Protocols',
+      icon: '🔗',
+      description: 'Query Aave V2/V3, Compound V2/V3, and MakerDAO with a single, normalized endpoint. Stop building dozens of protocol-specific integrations.',
+    },
+    {
+      title: 'Multi-Chain by Default',
+      icon: '⛓️',
+      description: 'Get instant, aggregated data across Ethereum, Polygon, Arbitrum, and Base. We handle the complexity of multi-chain routing.',
+    },
+    {
+      title: 'DeFi Credit Scoring',
+      icon: '📊',
+      description: 'FICO-style scores (300-850) with detailed risk breakdowns, liquidation scenarios, and personalized recommendations.',
+    },
+    {
+      title: 'Real-Time Analysis',
+      icon: '⚡',
+      description: 'Direct blockchain queries with intelligent caching deliver sub-100ms responses for all DeFi position queries.',
+    },
+    {
+      title: 'Enterprise Infrastructure',
+      icon: '🏢',
+      description: 'Built on our own node infrastructure with 99.9% uptime SLA. No dependency on third-party rate limits.',
+    },
+    {
+      title: 'Developer First',
+      icon: '🛠️',
+      description: 'Clear error handling, detailed OpenAPI specs, and ready-to-use code examples in multiple languages.',
+    },
+  ];
+
   return (
-    <section className={'quickStartSection'}>
+    <section className="features-section">
       <div className="container">
+        <h2 className="section-title">Everything You Need for DeFi Intelligence</h2>
+        <p className="section-subtitle">
+          Built by developers who understand the pain of integrating multiple DeFi protocols
+        </p>
+        <div className="row">
+          {features.map((feature, idx) => (
+            <div key={idx} className="col col--4" style={{ marginBottom: '2rem' }}>
+              <div className="feature-card" style={{ '--index': idx } as React.CSSProperties}>
+                <div className="feature-icon">{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LiveExampleSection() {
+  const exampleCode = `# Get DeFi credit score and risk analysis
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+
+# Response (actual $2.2B whale position):
+{
+  "defi_score": 467,
+  "risk_level": "High Risk",
+  "total_collateral_usd": 2175957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  
+  "risk_factors": [{
+    "severity": "critical",
+    "factor": "Imminent Liquidation Risk",
+    "description": "Position will be liquidated if collateral drops 6.7%"
+  }],
+  
+  "recommendations": {
+    "immediate": ["🚨 URGENT: Deposit $387M more collateral OR repay debt"]
+  }
+}`;
+
+  return (
+    <section className="example-section">
+      <div className="container">
+        <h2 className="section-title">See It In Action</h2>
+        <p className="section-subtitle">
+          Real-time analysis of a $2.2B DeFi whale position
+        </p>
         <div className="row">
           <div className="col col--12">
-            <h2 className={'sectionTitle'}>Quick Start: Get Your First Position</h2>
-            <p className={'sectionSubtitle'}>
-              Get a user's combined lending positions across all protocols with a single API call.
-            </p>
+            <div className="code-showcase">
+              <CodeBlock language="bash" children={exampleCode} />
+            </div>
           </div>
         </div>
-        <div className="row">
-          <div className="col col--12">
-            <div className={'codeBlockContainer'}>
-              <div className={'codeBlockHeader'}>
-                <span className={'codeBlockLang'}>bash</span>
-                <button className={'copyButton'} onClick={() => {
-                  navigator.clipboard.writeText(`# 1. Get your API Key
-export KIXAGO_KEY="YOUR_API_KEY"
-
-# 2. Query a user's positions (normalized response)
-curl -H "Authorization: Bearer $KIXAGO_KEY" \\
-  "https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress"
-
-# Output will include data from Aave, Compound, MakerDAO, etc.`);
-                }}>
-                  Copy
-                </button>
-              </div>
-              <pre className={'codeBlock'}>
-{`# 1. Get your API Key
-export KIXAGO_KEY="YOUR_API_KEY"
-
-# 2. Query a user's positions (normalized response)
-curl -H "Authorization: Bearer $KIXAGO_KEY" \\
-  "https://api.kixago.com/api/v1/lending/positions?address=0xYourAddress"
-
-# Output will include data from Aave, Compound, MakerDAO, etc.`}
-              </pre>
-            </div>
-            </div>
-            </div>
-        <div className="row" style={{marginTop: '2rem'}}>
-          <div className="col col--4">
-            <div className={'statCard'}>
-              <div className={'statNumber'}>50ms</div>
-              <div className={'statLabel'}>Avg Response Time</div>
-            </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-number">1-2s</div>
+            <div className="stat-label">Response Time</div>
           </div>
-          <div className="col col--4">
-            <div className={'statCard'}>
-              <div className={'statNumber'}>5+</div>
-              <div className={'statLabel'}>Protocols Supported</div>
-            </div>
+          <div className="stat-card">
+            <div className="stat-number">5+</div>
+            <div className="stat-label">Protocols Supported</div>
           </div>
-          <div className="col col--4">
-            <div className={'statCard'}>
-              <div className={'statNumber'}>4</div>
-              <div className={'statLabel'}>Chains Available</div>
-            </div>
+          <div className="stat-card">
+            <div className="stat-number">4</div>
+            <div className="stat-label">Chains Aggregated</div>
           </div>
         </div>
       </div>
@@ -160,53 +147,177 @@ curl -H "Authorization: Bearer $KIXAGO_KEY" \\
 }
 
 function UseCaseSection() {
+  const useCases = [
+    {
+      icon: '🏦',
+      title: 'Banks & Lenders',
+      subtitle: 'Underwrite Crypto-Native Borrowers',
+      description: 'Verify DeFi collateral and assess liquidation risk for loan applications.',
+      example: 'A borrower with $10M in DeFi can now get traditional financing.',
+    },
+    {
+      icon: '💼',
+      title: 'Wealth Advisors',
+      subtitle: 'DeFi Portfolio Oversight',
+      description: 'Monitor client DeFi positions and provide risk management advice.',
+      example: 'Turn DeFi monitoring into a billable advisory service.',
+    },
+    {
+      icon: '🚨',
+      title: 'Risk Management',
+      subtitle: 'Liquidation Prevention',
+      description: 'Alert users before positions reach dangerous health factors.',
+      example: 'Save millions in liquidation penalties with proactive alerts.',
+    },
+    {
+      icon: '🤖',
+      title: 'Trading Bots',
+      subtitle: 'Liquidation Hunting',
+      description: 'Monitor whale positions for profitable liquidation opportunities.',
+      example: 'Sub-100ms responses enable real-time opportunity detection.',
+    },
+    {
+      icon: '📱',
+      title: 'DeFi Dashboards',
+      subtitle: 'Complete Portfolio Views',
+      description: 'Show users all their positions across protocols in one place.',
+      example: 'Ship in 5 minutes instead of 3 months of integration work.',
+    },
+    {
+      icon: '📈',
+      title: 'Yield Optimization',
+      subtitle: 'Find Best Rates',
+      description: 'Compare lending rates across all protocols and chains instantly.',
+      example: 'Help users maximize yields while managing risk.',
+    },
+  ];
+
   return (
-    <section className={'useCaseSection'}>
+    <section className="features-section">
       <div className="container">
-        <h2 className={'sectionTitle'}>Built for Real-World Use Cases</h2>
+        <h2 className="section-title">Built for Real-World Use Cases</h2>
+        <p className="section-subtitle">
+          From institutional risk management to DeFi dashboards
+        </p>
+        <div className="use-case-grid">
+          {useCases.map((useCase, idx) => (
+            <div key={idx} className="use-case-card">
+              <h3 className="use-case-title">
+                <span className="use-case-icon">{useCase.icon}</span>
+                {useCase.title}
+              </h3>
+              <h4 className="use-case-subtitle">{useCase.subtitle}</h4>
+              <p className="use-case-description">{useCase.description}</p>
+              <p className="use-case-example">
+                <strong>Example:</strong> {useCase.example}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ScoreExplanationSection() {
+  const scoreRanges = [
+    {
+      range: '750-850',
+      level: 'Very Low Risk',
+      badge: { text: 'SAFE', className: 'risk-low' },
+      description: 'Healthy positions, low leverage',
+      action: 'Green light for borrowing',
+      rowClass: 'score-row-safe',
+    },
+    {
+      range: '650-749',
+      level: 'Low Risk',
+      badge: null,
+      description: 'Conservative borrowing',
+      action: 'Monitor occasionally',
+      rowClass: '',
+    },
+    {
+      range: '550-649',
+      level: 'Medium Risk',
+      badge: { text: 'WATCH', className: 'risk-medium' },
+      description: 'Moderate leverage',
+      action: 'Watch closely',
+      rowClass: 'score-row-warning',
+    },
+    {
+      range: '450-549',
+      level: 'High Risk',
+      badge: null,
+      description: 'Approaching danger zone',
+      action: 'Reduce leverage soon',
+      rowClass: '',
+    },
+    {
+      range: '300-449',
+      level: 'Very High Risk',
+      badge: { text: 'DANGER', className: 'risk-high' },
+      description: 'Imminent liquidation risk',
+      action: 'Take action NOW',
+      rowClass: 'score-row-danger',
+    },
+  ];
+
+  return (
+    <section className="example-section">
+      <div className="container">
+        <h2 className="section-title">Understanding DeFi Credit Scores</h2>
+        <p className="section-subtitle">
+          Transparent, quantifiable risk assessment using a 5-factor model
+        </p>
         <div className="row">
-          <div className="col col--6">
-            <div className={'useCaseCard'}>
-              <h3>🚨 Liquidation Alert Systems</h3>
-              <p>
-                Monitor health factors across all protocols and chains. Alert users before positions reach critical levels.
-              </p>
-              <Link to="/docs/examples/liquidation-alerts">
-                View Example →
-              </Link>
-            </div>
+          <div className="col col--12">
+            <table className="score-table">
+              <thead>
+                <tr>
+                  <th>Score Range</th>
+                  <th>Risk Level</th>
+                  <th>Description</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scoreRanges.map((score, idx) => (
+                  <tr key={idx} className={score.rowClass}>
+                    <td><strong>{score.range}</strong></td>
+                    <td>
+                      {score.level}
+                      {score.badge && (
+                        <span className={`risk-badge ${score.badge.className}`}>
+                          {score.badge.text}
+                        </span>
+                      )}
+                    </td>
+                    <td>{score.description}</td>
+                    <td>{score.action}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="col col--6">
-            <div className={'useCaseCard'}>
-              <h3>📊 Portfolio Dashboards</h3>
-              <p>
-                Display unified portfolio views showing all lending positions, yields, and risks across DeFi protocols.
-              </p>
-              <Link to="/docs/examples/portfolio-dashboard">
-                View Example →
-              </Link>
-            </div>
-          </div>
-          <div className="col col--6">
-            <div className={'useCaseCard'}>
-              <h3>💰 Yield Optimization</h3>
-              <p>
-                Compare lending opportunities across protocols and chains to help users maximize their yields.
-              </p>
-              <Link to="/docs/examples/yield-optimization">
-                View Example →
-              </Link>
-            </div>
-          </div>
-          <div className="col col--6">
-            <div className={'useCaseCard'}>
-              <h3>🏦 Institutional Risk Management</h3>
-              <p>
-                Enterprise-grade risk analytics for large DeFi positions with real-time monitoring and reporting.
-              </p>
-              <Link to="/docs/examples/risk-management">
-                View Example →
-              </Link>
+        </div>
+        <div className="row">
+          <div className="col col--12">
+            <h3 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>5-Factor Scoring Model</h3>
+            <div className="row">
+              <div className="col col--6">
+                <ul style={{ fontSize: '1.1rem', lineHeight: '2' }}>
+                  <li><strong>Health Factor (40%)</strong> - Proximity to liquidation</li>
+                  <li><strong>Leverage Ratio (30%)</strong> - Debt-to-collateral ratio</li>
+                  <li><strong>Diversification (15%)</strong> - Concentration risk</li>
+                </ul>
+              </div>
+              <div className="col col--6">
+                <ul style={{ fontSize: '1.1rem', lineHeight: '2' }}>
+                  <li><strong>Volatility (10%)</strong> - Collateral asset risk</li>
+                  <li><strong>Protocol Risk (5%)</strong> - Smart contract maturity</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -217,55 +328,74 @@ function UseCaseSection() {
 
 function CTASection() {
   return (
-    <section className={'ctaSection'}>
+    <section className="cta-section">
       <div className="container">
-        <h2>Ready to Simplify Your DeFi Integration?</h2>
-        <p>Join developers who are already building with Kixago</p>
-        <div className={'buttons'}>
-          <Link
-            className="button button--primary button--lg"
-            to="/docs/intro">
-            Start Building Now
-          </Link>
-          <Link
-            className="button button--secondary button--lg"
-            href="https://github.com/kixago/defi-aggregator-api"
-            target="_blank"
-            rel="noopener noreferrer">
-            View on GitHub
-          </Link>
+        <div className="cta-content">
+          <h2 className="cta-title">Ready to Build with DeFi Intelligence?</h2>
+          <p className="cta-subtitle">
+            Join developers who are shipping DeFi features in minutes, not months
+          </p>
+          <div className="cta-buttons">
+            <Link
+              className="button button--primary button--lg btn-hero-primary btn-shine"
+              to="/docs/intro">
+              Start Free Trial
+            </Link>
+            <Link
+              className="button button--secondary button--lg btn-hero-secondary"
+              to="/docs/api">
+              Read Documentation
+            </Link>
+          </div>
+          <p className="cta-note">
+            Free tier includes 10,000 API calls per month • No credit card required
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-export default function Home() {
-  const {siteConfig} = useDocusaurusContext();
+function TrustedBySection() {
+  const trustedBy = [
+    { icon: '🏦', text: 'DeFi Lenders' },
+    { icon: '📊', text: 'Analytics Platforms' },
+    { icon: '🤖', text: 'Trading Bots' },
+    { icon: '💼', text: 'Wealth Advisors' },
+    { icon: '🚨', text: 'Risk Managers' },
+  ];
+
+  return (
+    <section className="trusted-section">
+      <div className="container">
+        <h3 className="trusted-title">
+          Trusted by Leading DeFi Teams
+        </h3>
+        <div className="trusted-logos">
+          {trustedBy.map((item, idx) => (
+            <div key={idx} className="trusted-logo">
+              <span>{item.icon}</span>
+              <span>{item.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function Home(): JSX.Element {
   return (
     <Layout
-      title={`Home`}
-      description="The unified API for multi-chain DeFi protocol data. Query Aave, Compound, MakerDAO and more with a single endpoint.">
+      title="DeFi Credit Intelligence API"
+      description="The FICO Score for DeFi. One API for complete lending positions across Aave, Compound, and MakerDAO with credit scoring and liquidation risk analysis.">
       <HomepageHeader />
       <main>
-        <section className={'features'}>
-          <div className="container">
-            <div className="row">
-              {featuresData.map((feature, idx) => (
-                    // 💥 The explicit mapping is required to fix the spread error,
-                    // but the React.FC definition above is what enables 'key' to work.
-                <Feature
-                    key={idx}
-                    title={feature.title}
-                    icon={feature.icon}
-                    description={feature.description}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-        <QuickStartSection />
+        <FeatureSection />
+        <LiveExampleSection />
+        <ScoreExplanationSection />
         <UseCaseSection />
+        <TrustedBySection />
         <CTASection />
       </main>
     </Layout>

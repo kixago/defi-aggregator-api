@@ -1,0 +1,1170 @@
+---
+sidebar_position: 4
+title: "PHP Examples"
+description: "Complete PHP, Laravel, and Symfony code examples"
+---
+
+# PHP Examples
+
+Complete, production-ready code examples for integrating Kixago API in PHP, Laravel, and Symfony applications.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# Install Guzzle HTTP client
+composer require guzzlehttp/guzzle
+
+# Laravel: Already includes Guzzle
+# Symfony: Install HTTP client
+composer require symfony/http-client
+
+# Optional: For environment variables
+composer require vlucas/phpdotenv
+
+# Optional: For caching
+composer require predis/predis
+```
+
+### Environment Setup
+
+Store your API key in environment variables:
+
+```bash
+# .env
+KIXAGO_API_KEY=kixakey_your_key_here
+```
+
+```php
+// Load environment variables (plain PHP)
+require 'vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$apiKey = $_ENV['KIXAGO_API_KEY'];
+```
+
+---
+
+## Basic Examples (Plain PHP)
+
+### Example 1: Simple Request with Guzzle
+
+```php
+<?php
+// basic_example.php
+
+require 'vendor/autoload.php';
+
+use GuzzleHttp\Client;
+
+function getRiskProfile(string $walletAddress): array
+{
+    $client = new Client([
+        'base_uri' => 'https://api.kixago.com',
+        'timeout' => 30,
+    ]);
+    
+    $response = $client->get("/v1/risk-profile/{$walletAddress}", [
+        'headers' => [
+            'X-API-Key' => $_ENV['KIXAGO_API_KEY'],
+            'Accept' => 'application/json',
+        ],
+    ]);
+    
+    return json_decode($response->getBody(), true);
+}
+
+// Usage
+try {
+    $profile = getRiskProfile('0xf0bb20865277aBd641a307eCe5Ee04E79073416C');
+    
+    echo "DeFi Score: {$profile['defi_score']['defi_score']}\n";
+    echo "Risk Level: {$profile['defi_score']['risk_level']}\n";
+    echo "Health Factor: " . number_format($profile['global_health_factor'], 2) . "\n";
+    
+} catch (Exception $e) {
+    echo "Error: {$e->getMessage()}\n";
+}
+```
+
+---
+
+### Example 2: Type-Safe Client with DTOs
+
+```php
+<?php
+// src/DTO/TokenDetail.php
+
+namespace App\DTO;
+
+class TokenDetail
+{
+    public function __construct(
+        public readonly string $token,
+        public readonly float $amount,
+        public readonly float $usdValue,
+        public readonly string $tokenAddress
+    ) {}
+    
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            token: $data['token'],
+            amount: $data['amount'],
+            usdValue: $data['usd_value'],
+            tokenAddress: $data['token_address']
+        );
+    }
+}
+
+// src/DTO/LendingPosition.php
+
+namespace App\DTO;
+
+class LendingPosition
+{
+    /** @param TokenDetail[] $collateralDetails */
+    /** @param TokenDetail[] $borrowedDetails */
+    public function __construct(
+        public readonly string $protocol,
+        public readonly string $protocolVersion,
+        public readonly string $chain,
+        public readonly string $userAddress,
+        public readonly float $collateralUsd,
+        public readonly float $borrowedUsd,
+        public readonly float $healthFactor,
+        public readonly float $ltvCurrent,
+        public readonly bool $isAtRisk,
+        public readonly array $collateralDetails,
+        public readonly array $borrowedDetails,
+        public readonly string $lastUpdated
+    ) {}
+    
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            protocol: $data['protocol'],
+            protocolVersion: $data['protocol_version'],
+            chain: $data['chain'],
+            userAddress: $data['user_address'],
+            collateralUsd: $data['collateral_usd'],
+            borrowedUsd: $data['borrowed_usd'],
+            healthFactor: $data['health_factor'],
+            ltvCurrent: $data['ltv_current'],
+            isAtRisk: $data['is_at_risk'],
+            collateralDetails: array_map(
+                fn($detail) => TokenDetail::fromArray($detail),
+                $data['collateral_details'] ?? []
+            ),
+            borrowedDetails: array_map(
+                fn($detail) => TokenDetail::fromArray($detail),
+                $data['borrowed_details'] ?? []
+            ),
+            lastUpdated: $data['last_updated']
+        );
+    }
+}
+
+// src/DTO/DeFiScore.php
+
+namespace App\DTO;
+
+class DeFiScore
+{
+    public function __construct(
+        public readonly int $score,
+        public readonly string $riskLevel,
+        public readonly string $riskCategory,
+        public readonly string $color,
+        public readonly array $scoreBreakdown,
+        public readonly array $riskFactors,
+        public readonly array $recommendations,
+        public readonly array $liquidationSimulation,
+        public readonly string $calculatedAt
+    ) {}
+    
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            score: $data['defi_score'],
+            riskLevel: $data['risk_level'],
+            riskCategory: $data['risk_category'],
+            color: $data['color'],
+            scoreBreakdown: $data['score_breakdown'],
+            riskFactors: $data['risk_factors'],
+            recommendations: $data['recommendations'],
+            liquidationSimulation: $data['liquidation_simulation'],
+            calculatedAt: $data['calculated_at']
+        );
+    }
+}
+
+// src/DTO/RiskProfileResponse.php
+
+namespace App\DTO;
+
+class RiskProfileResponse
+{
+    /** @param LendingPosition[] $lendingPositions */
+    public function __construct(
+        public readonly string $walletAddress,
+        public readonly float $totalCollateralUsd,
+        public readonly float $totalBorrowedUsd,
+        public readonly float $globalHealthFactor,
+        public readonly float $globalLtv,
+        public readonly int $positionsAtRiskCount,
+        public readonly string $lastUpdated,
+        public readonly string $aggregationDuration,
+        public readonly array $lendingPositions,
+        public readonly ?DeFiScore $defiScore,
+        public readonly array $aggregationErrors = []
+    ) {}
+    
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            walletAddress: $data['wallet_address'],
+            totalCollateralUsd: $data['total_collateral_usd'],
+            totalBorrowedUsd: $data['total_borrowed_usd'],
+            globalHealthFactor: $data['global_health_factor'],
+            globalLtv: $data['global_ltv'],
+            positionsAtRiskCount: $data['positions_at_risk_count'],
+            lastUpdated: $data['last_updated'],
+            aggregationDuration: $data['aggregation_duration'],
+            lendingPositions: array_map(
+                fn($pos) => LendingPosition::fromArray($pos),
+                $data['lending_positions']
+            ),
+            defiScore: isset($data['defi_score']) 
+                ? DeFiScore::fromArray($data['defi_score']) 
+                : null,
+            aggregationErrors: $data['aggregation_errors'] ?? []
+        );
+    }
+}
+
+// src/KixagoClient.php
+
+namespace App;
+
+use App\DTO\RiskProfileResponse;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+
+class KixagoClient
+{
+    private Client $client;
+    
+    public function __construct(
+        private readonly string $apiKey,
+        private readonly string $baseUrl = 'https://api.kixago.com'
+    ) {
+        $this->client = new Client([
+            'base_uri' => $this->baseUrl,
+            'timeout' => 30,
+            'headers' => [
+                'X-API-Key' => $this->apiKey,
+                'Accept' => 'application/json',
+            ],
+        ]);
+    }
+    
+    /**
+     * @throws KixagoException
+     */
+    public function getRiskProfile(string $walletAddress): RiskProfileResponse
+    {
+        try {
+            $response = $this->client->get("/v1/risk-profile/{$walletAddress}");
+            
+            $data = json_decode($response->getBody(), true);
+            
+            // Warn about partial failures
+            if (!empty($data['aggregation_errors'])) {
+                error_log('⚠️ Warning: Some protocols failed: ' . json_encode($data['aggregation_errors']));
+            }
+            
+            return RiskProfileResponse::fromArray($data);
+            
+        } catch (GuzzleException $e) {
+            throw new KixagoException(
+                "Failed to fetch risk profile: {$e->getMessage()}",
+                $e->getCode(),
+                $e
+            );
+        }
+    }
+}
+
+// src/KixagoException.php
+
+namespace App;
+
+class KixagoException extends \Exception
+{
+    public function __construct(
+        string $message,
+        int $code = 0,
+        ?\Throwable $previous = null
+    ) {
+        parent::__construct($message, $code, $previous);
+    }
+}
+
+// Usage
+$client = new App\KixagoClient($_ENV['KIXAGO_API_KEY']);
+
+try {
+    $profile = $client->getRiskProfile('0xf0bb20865277aBd641a307eCe5Ee04E79073416C');
+    
+    echo "DeFi Score: {$profile->defiScore->score}\n";
+    echo "Risk Level: {$profile->defiScore->riskLevel}\n";
+    
+    foreach ($profile->lendingPositions as $position) {
+        echo "\n{$position->protocol} on {$position->chain}\n";
+        echo "  Collateral: $" . number_format($position->collateralUsd, 2) . "\n";
+        echo "  Health Factor: " . number_format($position->healthFactor, 3) . "\n";
+    }
+    
+} catch (App\KixagoException $e) {
+    echo "Error: {$e->getMessage()}\n";
+}
+```
+
+---
+
+## Laravel Examples
+
+### Example 3: Laravel Service Provider
+
+```php
+<?php
+// app/Services/KixagoService.php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use App\DTO\RiskProfileResponse;
+
+class KixagoService
+{
+    private string $apiKey;
+    private string $baseUrl;
+    
+    public function __construct()
+    {
+        $this->apiKey = config('services.kixago.api_key');
+        $this->baseUrl = config('services.kixago.base_url', 'https://api.kixago.com');
+    }
+    
+    /**
+     * Get risk profile with caching
+     */
+    public function getRiskProfile(string $walletAddress): RiskProfileResponse
+    {
+        $cacheKey = "kixago:profile:{$walletAddress}";
+        
+        return Cache::remember($cacheKey, 30, function () use ($walletAddress) {
+            $response = Http::withHeaders([
+                'X-API-Key' => $this->apiKey,
+            ])
+            ->timeout(30)
+            ->get("{$this->baseUrl}/v1/risk-profile/{$walletAddress}");
+            
+            if ($response->failed()) {
+                throw new \Exception(
+                    "Kixago API error ({$response->status()}): {$response->json('error')}"
+                );
+            }
+            
+            $data = $response->json();
+            
+            // Log partial failures
+            if (!empty($data['aggregation_errors'])) {
+                \Log::warning('Kixago partial failure', $data['aggregation_errors']);
+            }
+            
+            return RiskProfileResponse::fromArray($data);
+        });
+    }
+}
+
+// config/services.php
+
+return [
+    // ... other services
+    
+    'kixago' => [
+        'api_key' => env('KIXAGO_API_KEY'),
+        'base_url' => env('KIXAGO_BASE_URL', 'https://api.kixago.com'),
+    ],
+];
+
+// app/Providers/AppServiceProvider.php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use App\Services\KixagoService;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(KixagoService::class, function ($app) {
+            return new KixagoService();
+        });
+    }
+}
+```
+
+---
+
+### Example 4: Laravel Controller
+
+```php
+<?php
+// app/Http/Controllers/Api/WalletController.php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Services\KixagoService;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+
+class WalletController extends Controller
+{
+    public function __construct(
+        private readonly KixagoService $kixago
+    ) {}
+    
+    /**
+     * Get wallet risk profile
+     */
+    public function show(string $address): JsonResponse
+    {
+        try {
+            $profile = $this->kixago->getRiskProfile($address);
+            
+            return response()->json($profile);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+}
+
+// routes/api.php
+
+use App\Http\Controllers\Api\WalletController;
+
+Route::get('/wallet/{address}', [WalletController::class, 'show']);
+```
+
+---
+
+### Example 5: Laravel Artisan Command (Monitoring Bot)
+
+```php
+<?php
+// app/Console/Commands/MonitorLiquidationRisk.php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Services\KixagoService;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\LiquidationAlert;
+
+class MonitorLiquidationRisk extends Command
+{
+    protected $signature = 'kixago:monitor {--wallets=*}';
+    protected $description = 'Monitor wallets for liquidation risk';
+    
+    public function __construct(
+        private readonly KixagoService $kixago
+    ) {
+        parent::__construct();
+    }
+    
+    public function handle(): int
+    {
+        $wallets = $this->option('wallets') ?: config('kixago.monitored_wallets');
+        
+        if (empty($wallets)) {
+            $this->error('No wallets to monitor');
+            return 1;
+        }
+        
+        $this->info('Monitoring ' . count($wallets) . ' wallets...');
+        
+        $alerts = [];
+        
+        foreach ($wallets as $wallet) {
+            try {
+                $profile = $this->kixago->getRiskProfile($wallet);
+                
+                if (!$profile->defiScore || $profile->totalCollateralUsd === 0.0) {
+                    continue;
+                }
+                
+                $buffer = $profile->defiScore->liquidationSimulation['buffer_percentage'];
+                
+                if ($buffer < 5) {
+                    $alerts[] = [
+                        'wallet' => $wallet,
+                        'urgency' => 'CRITICAL',
+                        'buffer' => $buffer,
+                        'collateral' => $profile->totalCollateralUsd,
+                        'message' => "🚨 CRITICAL: Only {$buffer}% buffer remaining!",
+                    ];
+                    $this->error("⚠️ CRITICAL: {$wallet} - {$buffer}% buffer");
+                    
+                } elseif ($buffer < 10) {
+                    $alerts[] = [
+                        'wallet' => $wallet,
+                        'urgency' => 'HIGH',
+                        'buffer' => $buffer,
+                        'collateral' => $profile->totalCollateralUsd,
+                        'message' => "⚠️ HIGH RISK: {$buffer}% buffer",
+                    ];
+                    $this->warn("⚠️ HIGH: {$wallet} - {$buffer}% buffer");
+                    
+                } elseif ($buffer < 20) {
+                    $this->info("⚡ MEDIUM: {$wallet} - {$buffer}% buffer");
+                }
+                
+            } catch (\Exception $e) {
+                $this->error("Error monitoring {$wallet}: {$e->getMessage()}");
+            }
+        }
+        
+        // Send notifications for critical alerts
+        foreach ($alerts as $alert) {
+            if ($alert['urgency'] === 'CRITICAL') {
+                // Send notification (email, Slack, etc.)
+                $this->sendCriticalAlert($alert);
+            }
+        }
+        
+        $this->info('Monitoring complete. Found ' . count($alerts) . ' alerts.');
+        
+        return 0;
+    }
+    
+    private function sendCriticalAlert(array $alert): void
+    {
+        // Example: Send to Slack
+        \Log::critical('Liquidation alert', $alert);
+        
+        // Or use Laravel notifications
+        // Notification::route('slack', config('slack.webhook_url'))
+        //     ->notify(new LiquidationAlert($alert));
+    }
+}
+
+// config/kixago.php
+
+return [
+    'monitored_wallets' => [
+        '0xf0bb20865277aBd641a307eCe5Ee04E79073416C',
+        '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    ],
+];
+
+// Schedule in app/Console/Kernel.php
+
+protected function schedule(Schedule $schedule): void
+{
+    $schedule->command('kixago:monitor')
+        ->everyFiveMinutes()
+        ->withoutOverlapping();
+}
+
+// Run manually:
+// php artisan kixago:monitor --wallets=0xf0bb... --wallets=0x742d...
+```
+
+---
+
+### Example 6: Laravel Credit Underwriting
+
+```php
+<?php
+// app/Services/UnderwritingService.php
+
+namespace App\Services;
+
+use App\DTO\RiskProfileResponse;
+
+enum Decision: string
+{
+    case APPROVED = 'APPROVED';
+    case DECLINED = 'DECLINED';
+    case MANUAL_REVIEW = 'MANUAL_REVIEW';
+}
+
+class UnderwritingDecision
+{
+    public function __construct(
+        public readonly Decision $decision,
+        public readonly string $reason,
+        public readonly ?int $defiScore = null,
+        public readonly ?string $riskCategory = null,
+        public readonly ?float $maxLoanAmount = null,
+        public readonly array $conditions = []
+    ) {}
+}
+
+class UnderwritingService
+{
+    public function __construct(
+        private readonly KixagoService $kixago
+    ) {}
+    
+    public function underwrite(string $walletAddress, float $requestedLoanAmount): UnderwritingDecision
+    {
+        try {
+            $profile = $this->kixago->getRiskProfile($walletAddress);
+            
+            // Check if wallet has DeFi history
+            if (!$profile->defiScore) {
+                return new UnderwritingDecision(
+                    decision: Decision::DECLINED,
+                    reason: 'No DeFi lending history found'
+                );
+            }
+            
+            $score = $profile->defiScore->score;
+            $riskCategory = $profile->defiScore->riskCategory;
+            $healthFactor = $profile->globalHealthFactor;
+            $collateral = $profile->totalCollateralUsd;
+            
+            // Rule 1: Minimum credit score
+            if ($score < 550) {
+                return new UnderwritingDecision(
+                    decision: Decision::DECLINED,
+                    reason: "DeFi credit score too low: {$score}",
+                    defiScore: $score
+                );
+            }
+            
+            // Rule 2: Health factor requirement
+            if ($healthFactor > 0 && $healthFactor < 1.5) {
+                return new UnderwritingDecision(
+                    decision: Decision::DECLINED,
+                    reason: sprintf('Health factor too low: %.2f (minimum 1.5)', $healthFactor),
+                    defiScore: $score
+                );
+            }
+            
+            // Rule 3: Collateral requirement (2x loan amount)
+            $minCollateral = $requestedLoanAmount * 2;
+            if ($collateral < $minCollateral) {
+                return new UnderwritingDecision(
+                    decision: Decision::DECLINED,
+                    reason: sprintf(
+                        'Insufficient collateral. Need $%s, have $%s',
+                        number_format($minCollateral),
+                        number_format($collateral)
+                    ),
+                    defiScore: $score
+                );
+            }
+            
+            // Rule 4: Risk category checks
+            if ($riskCategory === 'URGENT_ACTION_REQUIRED') {
+                return new UnderwritingDecision(
+                    decision: Decision::DECLINED,
+                    reason: 'Critical risk factors detected - imminent liquidation risk',
+                    defiScore: $score,
+                    riskCategory: $riskCategory
+                );
+            }
+            
+            if ($riskCategory === 'HIGH_RISK') {
+                return new UnderwritingDecision(
+                    decision: Decision::MANUAL_REVIEW,
+                    reason: 'High risk category - requires underwriter review',
+                    defiScore: $score,
+                    riskCategory: $riskCategory,
+                    conditions: $profile->defiScore->recommendations['immediate']
+                );
+            }
+            
+            // Calculate max loan amount (50% of collateral)
+            $maxLoan = $collateral * 0.5;
+            
+            if ($requestedLoanAmount > $maxLoan) {
+                return new UnderwritingDecision(
+                    decision: Decision::MANUAL_REVIEW,
+                    reason: 'Requested amount exceeds max (50% of collateral)',
+                    defiScore: $score,
+                    maxLoanAmount: $maxLoan
+                );
+            }
+            
+            // APPROVED!
+            return new UnderwritingDecision(
+                decision: Decision::APPROVED,
+                reason: "Strong DeFi profile - Score {$score}, Risk: {$riskCategory}",
+                defiScore: $score,
+                riskCategory: $riskCategory,
+                maxLoanAmount: $maxLoan,
+                conditions: []
+            );
+            
+        } catch (\Exception $e) {
+            \Log::error('Underwriting error', ['error' => $e->getMessage()]);
+            
+            return new UnderwritingDecision(
+                decision: Decision::MANUAL_REVIEW,
+                reason: 'Error fetching DeFi profile - manual review required'
+            );
+        }
+    }
+}
+
+// app/Http/Controllers/Api/UnderwritingController.php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Services\UnderwritingService;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+
+class UnderwritingController extends Controller
+{
+    public function __construct(
+        private readonly UnderwritingService $underwriting
+    ) {}
+    
+    public function underwrite(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'wallet_address' => 'required|string|size:42',
+            'loan_amount' => 'required|numeric|min:0',
+        ]);
+        
+        $decision = $this->underwriting->underwrite(
+            $validated['wallet_address'],
+            $validated['loan_amount']
+        );
+        
+        return response()->json([
+            'decision' => $decision->decision->value,
+            'reason' => $decision->reason,
+            'defi_score' => $decision->defiScore,
+            'risk_category' => $decision->riskCategory,
+            'max_loan_amount' => $decision->maxLoanAmount,
+            'conditions' => $decision->conditions,
+        ]);
+    }
+}
+
+// routes/api.php
+
+Route::post('/underwrite', [UnderwritingController::class, 'underwrite']);
+```
+
+---
+
+## Symfony Examples
+
+### Example 7: Symfony Service
+
+```php
+<?php
+// src/Service/KixagoService.php
+
+namespace App\Service;
+
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use App\DTO\RiskProfileResponse;
+
+class KixagoService
+{
+    private string $apiKey;
+    private string $baseUrl;
+    
+    public function __construct(
+        private readonly HttpClientInterface $client,
+        private readonly CacheInterface $cache,
+        string $kixagoApiKey,
+        string $kixagoBaseUrl = 'https://api.kixago.com'
+    ) {
+        $this->apiKey = $kixagoApiKey;
+        $this->baseUrl = $kixagoBaseUrl;
+    }
+    
+    public function getRiskProfile(string $walletAddress): RiskProfileResponse
+    {
+        $cacheKey = "kixago.profile.{$walletAddress}";
+        
+        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($walletAddress) {
+            $item->expiresAfter(30); // 30 seconds
+            
+            $response = $this->client->request('GET', "{$this->baseUrl}/v1/risk-profile/{$walletAddress}", [
+                'headers' => [
+                    'X-API-Key' => $this->apiKey,
+                    'Accept' => 'application/json',
+                ],
+                'timeout' => 30,
+            ]);
+            
+            if ($response->getStatusCode() !== 200) {
+                throw new \Exception(
+                    "Kixago API error ({$response->getStatusCode()}): {$response->getContent(false)}"
+                );
+            }
+            
+            $data = $response->toArray();
+            
+            return RiskProfileResponse::fromArray($data);
+        });
+    }
+}
+
+// config/services.yaml
+
+services:
+    App\Service\KixagoService:
+        arguments:
+            $kixagoApiKey: '%env(KIXAGO_API_KEY)%'
+            $kixagoBaseUrl: '%env(KIXAGO_BASE_URL)%'
+```
+
+---
+
+### Example 8: Symfony Controller
+
+```php
+<?php
+// src/Controller/Api/WalletController.php
+
+namespace App\Controller\Api;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Annotation\Route;
+use App\Service\KixagoService;
+
+#[Route('/api', name: 'api_')]
+class WalletController extends AbstractController
+{
+    public function __construct(
+        private readonly KixagoService $kixago
+    ) {}
+    
+    #[Route('/wallet/{address}', name: 'wallet_show', methods: ['GET'])]
+    public function show(string $address): JsonResponse
+    {
+        try {
+            $profile = $this->kixago->getRiskProfile($address);
+            
+            return $this->json($profile);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+}
+```
+
+---
+
+### Example 9: Symfony Console Command
+
+```php
+<?php
+// src/Command/MonitorLiquidationRiskCommand.php
+
+namespace App\Command;
+
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use App\Service\KixagoService;
+
+#[AsCommand(
+    name: 'kixago:monitor',
+    description: 'Monitor wallets for liquidation risk',
+)]
+class MonitorLiquidationRiskCommand extends Command
+{
+    public function __construct(
+        private readonly KixagoService $kixago
+    ) {
+        parent::__construct();
+    }
+    
+    protected function configure(): void
+    {
+        $this->addOption('wallets', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Wallet addresses to monitor');
+    }
+    
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+        $wallets = $input->getOption('wallets');
+        
+        if (empty($wallets)) {
+            $io->error('No wallets to monitor');
+            return Command::FAILURE;
+        }
+        
+        $io->title('Monitoring ' . count($wallets) . ' wallets for liquidation risk');
+        
+        $alerts = [];
+        
+        foreach ($wallets as $wallet) {
+            try {
+                $profile = $this->kixago->getRiskProfile($wallet);
+                
+                if (!$profile->defiScore || $profile->totalCollateralUsd === 0.0) {
+                    continue;
+                }
+                
+                $buffer = $profile->defiScore->liquidationSimulation['buffer_percentage'];
+                
+                if ($buffer < 5) {
+                    $io->error("🚨 CRITICAL: {$wallet} - {$buffer}% buffer");
+                    $alerts[] = ['wallet' => $wallet, 'urgency' => 'CRITICAL', 'buffer' => $buffer];
+                    
+                } elseif ($buffer < 10) {
+                    $io->warning("⚠️ HIGH: {$wallet} - {$buffer}% buffer");
+                    $alerts[] = ['wallet' => $wallet, 'urgency' => 'HIGH', 'buffer' => $buffer];
+                    
+                } elseif ($buffer < 20) {
+                    $io->note("⚡ MEDIUM: {$wallet} - {$buffer}% buffer");
+                }
+                
+            } catch (\Exception $e) {
+                $io->error("Error monitoring {$wallet}: {$e->getMessage()}");
+            }
+        }
+        
+        $io->success('Monitoring complete. Found ' . count($alerts) . ' alerts.');
+        
+        return Command::SUCCESS;
+    }
+}
+
+// Run: php bin/console kixago:monitor --wallets=0xf0bb... --wallets=0x742d...
+```
+
+---
+
+## Testing
+
+### Example 10: PHPUnit Tests (Laravel)
+
+```php
+<?php
+// tests/Feature/KixagoServiceTest.php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Services\KixagoService;
+use Illuminate\Support\Facades\Http;
+
+class KixagoServiceTest extends TestCase
+{
+    public function test_get_risk_profile_success(): void
+    {
+        // Mock HTTP response
+        Http::fake([
+            'https://api.kixago.com/v1/risk-profile/*' => Http::response([
+                'wallet_address' => '0xTest...',
+                'total_collateral_usd' => 100000.0,
+                'total_borrowed_usd' => 30000.0,
+                'global_health_factor' => 3.2,
+                'global_ltv' => 30.0,
+                'positions_at_risk_count' => 0,
+                'last_updated' => '2025-01-15T12:00:00Z',
+                'aggregation_duration' => '1.234s',
+                'lending_positions' => [],
+                'defi_score' => [
+                    'defi_score' => 750,
+                    'risk_level' => 'Very Low Risk',
+                    'risk_category' => 'VERY_LOW_RISK',
+                    'color' => 'green',
+                    'score_breakdown' => [],
+                    'risk_factors' => [],
+                    'recommendations' => ['immediate' => [], 'short_term' => [], 'long_term' => []],
+                    'liquidation_simulation' => [],
+                    'calculated_at' => '2025-01-15T12:00:00Z',
+                ],
+            ], 200),
+        ]);
+        
+        $service = new KixagoService();
+        $profile = $service->getRiskProfile('0xTest...');
+        
+        $this->assertEquals('0xTest...', $profile->walletAddress);
+        $this->assertEquals(750, $profile->defiScore->score);
+        $this->assertEquals('Very Low Risk', $profile->defiScore->riskLevel);
+    }
+    
+    public function test_get_risk_profile_404(): void
+    {
+        Http::fake([
+            'https://api.kixago.com/v1/risk-profile/*' => Http::response([
+                'error' => 'Wallet not found',
+            ], 404),
+        ]);
+        
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Kixago API error (404)');
+        
+        $service = new KixagoService();
+        $service->getRiskProfile('0xInvalid...');
+    }
+}
+
+// tests/Feature/UnderwritingServiceTest.php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Services\UnderwritingService;
+use App\Services\KixagoService;
+use App\Services\Decision;
+
+class UnderwritingServiceTest extends TestCase
+{
+    public function test_underwrite_approved(): void
+    {
+        // Mock KixagoService
+        $this->mock(KixagoService::class, function ($mock) {
+            $mock->shouldReceive('getRiskProfile')
+                ->once()
+                ->andReturn($this->createMockProfile(750, 3.2, 100000));
+        });
+        
+        $service = app(UnderwritingService::class);
+        $decision = $service->underwrite('0xTest...', 10000);
+        
+        $this->assertEquals(Decision::APPROVED, $decision->decision);
+        $this->assertEquals(750, $decision->defiScore);
+    }
+    
+    public function test_underwrite_declined_low_score(): void
+    {
+        $this->mock(KixagoService::class, function ($mock) {
+            $mock->shouldReceive('getRiskProfile')
+                ->once()
+                ->andReturn($this->createMockProfile(400, 3.2, 100000));
+        });
+        
+        $service = app(UnderwritingService::class);
+        $decision = $service->underwrite('0xTest...', 10000);
+        
+        $this->assertEquals(Decision::DECLINED, $decision->decision);
+        $this->assertStringContainsString('too low', $decision->reason);
+    }
+    
+    private function createMockProfile(int $score, float $healthFactor, float $collateral)
+    {
+        // Return mock RiskProfileResponse
+        // Implementation details...
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use dependency injection** - Inject KixagoService via constructor
+- **Implement caching** - Cache responses for 30+ seconds (Laravel Cache, Symfony Cache, Redis)
+- **Use DTOs/Value Objects** - Type-safe data transfer objects
+- **Handle errors gracefully** - Try/catch with proper logging
+- **Validate inputs** - Use Laravel validation or Symfony validators
+- **Use environment variables** - Never hardcode API keys
+- **Write tests** - PHPUnit tests with HTTP mocking
+- **Log partial failures** - Check and log `aggregation_errors`
+
+### ❌ DON'T
+
+- **Don't expose API keys** - Keep in .env files (add to .gitignore)
+- **Don't skip error handling** - Always wrap API calls in try/catch
+- **Don't ignore null values** - Check if `defi_score` is null
+- **Don't refetch every second** - Respect the 30s cache
+- **Don't use raw arrays** - Use DTOs for type safety
+- **Don't hardcode URLs** - Use configuration files
+
+---
+
+## Performance Tips
+
+### Async Requests (Laravel)
+
+```php
+use Illuminate\Support\Facades\Http;
+
+// Fetch multiple profiles concurrently
+$wallets = ['0xWallet1...', '0xWallet2...', '0xWallet3...'];
+
+$responses = Http::pool(fn ($pool) => 
+    collect($wallets)->map(fn ($wallet) =>
+        $pool->as($wallet)->withHeaders([
+            'X-API-Key' => config('services.kixago.api_key'),
+        ])->get("https://api.kixago.com/v1/risk-profile/{$wallet}")
+    )
+);
+
+foreach ($wallets as $wallet) {
+    if ($responses[$wallet]->successful()) {
+        $profile = RiskProfileResponse::fromArray($responses[$wallet]->json());
+        // Process profile...
+    }
+}
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/javascript" className="button button--primary button--lg">
+    📜 JavaScript Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices Guide
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a PHP SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---

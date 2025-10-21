@@ -1,0 +1,1322 @@
+---
+sidebar_position: 4
+title: "Swift Examples"
+description: "Complete Swift code examples for iOS, macOS, and server-side applications"
+---
+
+# Swift Examples
+
+Complete, production-ready code examples for integrating Kixago API in Swift applications. **Perfect for iOS/macOS apps and backend services!** 🍎
+
+---
+
+## Quick Start
+
+### Installation (Swift Package Manager)
+
+```swift
+// Package.swift
+// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "KixagoExample",
+    platforms: [
+        .iOS(.v15),
+        .macOS(.v12)
+    ],
+    dependencies: [
+        // No external dependencies needed for basic usage!
+        // Optional: For advanced features
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+    ],
+    targets: [
+        .executableTarget(
+            name: "KixagoExample",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log"),
+            ]
+        )
+    ]
+)
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request (iOS/macOS)
+
+```swift
+import Foundation
+
+struct DeFiScore: Codable {
+    let defiScore: Int
+    let riskLevel: String
+    let riskCategory: String
+    
+    enum CodingKeys: String, CodingKey {
+        case defiScore = "defi_score"
+        case riskLevel = "risk_level"
+        case riskCategory = "risk_category"
+    }
+}
+
+struct RiskProfile: Codable {
+    let walletAddress: String
+    let totalCollateralUsd: Double
+    let totalBorrowedUsd: Double
+    let globalHealthFactor: Double
+    let globalLtv: Double
+    let defiScore: DeFiScore?
+    
+    enum CodingKeys: String, CodingKey {
+        case walletAddress = "wallet_address"
+        case totalCollateralUsd = "total_collateral_usd"
+        case totalBorrowedUsd = "total_borrowed_usd"
+        case globalHealthFactor = "global_health_factor"
+        case globalLtv = "global_ltv"
+        case defiScore = "defi_score"
+    }
+}
+
+// Simple async/await example
+func getRiskProfile(walletAddress: String, apiKey: String) async throws -> RiskProfile {
+    let url = URL(string: "https://api.kixago.com/v1/risk-profile/\(walletAddress)")!
+    
+    var request = URLRequest(url: url)
+    request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.timeoutInterval = 30
+    
+    let (data, response) = try await URLSession.shared.data(for: request)
+    
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw URLError(.badServerResponse)
+    }
+    
+    let profile = try JSONDecoder().decode(RiskProfile.self, from: data)
+    return profile
+}
+
+// Usage in SwiftUI
+import SwiftUI
+
+struct ContentView: View {
+    @State private var profile: RiskProfile?
+    @State private var isLoading = false
+    
+    var body: some View {
+        VStack {
+            if isLoading {
+                ProgressView("Loading...")
+            } else if let profile = profile {
+                Text("DeFi Score: \(profile.defiScore?.defiScore ?? 0)")
+                Text("Risk Level: \(profile.defiScore?.riskLevel ?? "N/A")")
+                Text("Health Factor: \(String(format: "%.2f", profile.globalHealthFactor))")
+            } else {
+                Button("Load Profile") {
+                    Task {
+                        isLoading = true
+                        defer { isLoading = false }
+                        
+                        do {
+                            profile = try await getRiskProfile(
+                                walletAddress: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+                                apiKey: ProcessInfo.processInfo.environment["KIXAGO_API_KEY"] ?? ""
+                            )
+                        } catch {
+                            print("Error: \(error)")
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```swift
+// Models.swift
+import Foundation
+
+struct TokenDetail: Codable {
+    let token: String
+    let amount: Double
+    let usdValue: Double
+    let tokenAddress: String
+    
+    enum CodingKeys: String, CodingKey {
+        case token
+        case amount
+        case usdValue = "usd_value"
+        case tokenAddress = "token_address"
+    }
+}
+
+struct LendingPosition: Codable {
+    let `protocol`: String
+    let protocolVersion: String
+    let chain: String
+    let userAddress: String
+    let collateralUsd: Double
+    let borrowedUsd: Double
+    let healthFactor: Double
+    let ltvCurrent: Double
+    let isAtRisk: Bool
+    let collateralDetails: [TokenDetail]?
+    let borrowedDetails: [TokenDetail]?
+    let lastUpdated: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case `protocol`
+        case protocolVersion = "protocol_version"
+        case chain
+        case userAddress = "user_address"
+        case collateralUsd = "collateral_usd"
+        case borrowedUsd = "borrowed_usd"
+        case healthFactor = "health_factor"
+        case ltvCurrent = "ltv_current"
+        case isAtRisk = "is_at_risk"
+        case collateralDetails = "collateral_details"
+        case borrowedDetails = "borrowed_details"
+        case lastUpdated = "last_updated"
+    }
+}
+
+struct ComponentScore: Codable {
+    let componentScore: Double
+    let weight: Double
+    let weightedContribution: Double
+    let reasoning: String
+    
+    enum CodingKeys: String, CodingKey {
+        case componentScore = "component_score"
+        case weight
+        case weightedContribution = "weighted_contribution"
+        case reasoning
+    }
+}
+
+struct ScoreBreakdown: Codable {
+    let healthFactorScore: ComponentScore
+    let leverageScore: ComponentScore
+    let diversificationScore: ComponentScore
+    let volatilityScore: ComponentScore
+    let protocolRiskScore: ComponentScore
+    let totalInternalScore: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case healthFactorScore = "health_factor_score"
+        case leverageScore = "leverage_score"
+        case diversificationScore = "diversification_score"
+        case volatilityScore = "volatility_score"
+        case protocolRiskScore = "protocol_risk_score"
+        case totalInternalScore = "total_internal_score"
+    }
+}
+
+struct RiskFactor: Codable {
+    let severity: String
+    let factor: String
+    let description: String
+    let impactOnScore: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case severity
+        case factor
+        case description
+        case impactOnScore = "impact_on_score"
+    }
+}
+
+struct Recommendations: Codable {
+    let immediate: [String]
+    let shortTerm: [String]
+    let longTerm: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case immediate
+        case shortTerm = "short_term"
+        case longTerm = "long_term"
+    }
+}
+
+struct LiquidationScenario: Codable {
+    let event: String
+    let newHealthFactor: Double
+    let status: String
+    let timeEstimate: String?
+    let estimatedLoss: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case event
+        case newHealthFactor = "new_health_factor"
+        case status
+        case timeEstimate = "time_estimate"
+        case estimatedLoss = "estimated_loss"
+    }
+}
+
+struct LiquidationSimulation: Codable {
+    let currentHealthFactor: Double
+    let liquidationThreshold: Double
+    let bufferPercentage: Double
+    let scenarios: [LiquidationScenario]
+    
+    enum CodingKeys: String, CodingKey {
+        case currentHealthFactor = "current_health_factor"
+        case liquidationThreshold = "liquidation_threshold"
+        case bufferPercentage = "buffer_percentage"
+        case scenarios
+    }
+}
+
+struct DeFiScore: Codable {
+    let defiScore: Int
+    let riskLevel: String
+    let riskCategory: String
+    let color: String
+    let scoreBreakdown: ScoreBreakdown
+    let riskFactors: [RiskFactor]
+    let recommendations: Recommendations
+    let liquidationSimulation: LiquidationSimulation
+    let calculatedAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case defiScore = "defi_score"
+        case riskLevel = "risk_level"
+        case riskCategory = "risk_category"
+        case color
+        case scoreBreakdown = "score_breakdown"
+        case riskFactors = "risk_factors"
+        case recommendations
+        case liquidationSimulation = "liquidation_simulation"
+        case calculatedAt = "calculated_at"
+    }
+}
+
+struct RiskProfileResponse: Codable {
+    let walletAddress: String
+    let totalCollateralUsd: Double
+    let totalBorrowedUsd: Double
+    let globalHealthFactor: Double
+    let globalLtv: Double
+    let positionsAtRiskCount: Int
+    let lastUpdated: Date
+    let aggregationDuration: String
+    let lendingPositions: [LendingPosition]
+    let defiScore: DeFiScore?
+    let aggregationErrors: [String: String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case walletAddress = "wallet_address"
+        case totalCollateralUsd = "total_collateral_usd"
+        case totalBorrowedUsd = "total_borrowed_usd"
+        case globalHealthFactor = "global_health_factor"
+        case globalLtv = "global_ltv"
+        case positionsAtRiskCount = "positions_at_risk_count"
+        case lastUpdated = "last_updated"
+        case aggregationDuration = "aggregation_duration"
+        case lendingPositions = "lending_positions"
+        case defiScore = "defi_score"
+        case aggregationErrors = "aggregation_errors"
+    }
+}
+
+// Helper extensions
+extension RiskProfileResponse {
+    /// Check if any positions are at risk
+    var hasPositionsAtRisk: Bool {
+        positionsAtRiskCount > 0
+    }
+    
+    /// Get positions for a specific chain
+    func positions(forChain chain: String) -> [LendingPosition] {
+        lendingPositions.filter { $0.chain == chain }
+    }
+    
+    /// Get total collateral for a specific protocol
+    func collateral(forProtocol protocol: String) -> Double {
+        lendingPositions
+            .filter { $0.protocol == `protocol` }
+            .reduce(0) { $0 + $1.collateralUsd }
+    }
+}
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```swift
+// KixagoError.swift
+import Foundation
+
+enum KixagoError: LocalizedError {
+    case invalidAddress(String)
+    case unauthorized
+    case rateLimited(retryAfter: Int)
+    case serverError(String)
+    case apiError(status: Int, message: String)
+    case networkError(Error)
+    case decodingError(Error)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidAddress(let addr):
+            return "Invalid wallet address: \(addr)"
+        case .unauthorized:
+            return "Invalid API key"
+        case .rateLimited(let seconds):
+            return "Rate limit exceeded - retry after \(seconds)s"
+        case .serverError(let msg):
+            return "Server error: \(msg)"
+        case .apiError(let status, let msg):
+            return "API error \(status): \(msg)"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .decodingError(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
+        }
+    }
+}
+
+// KixagoClient.swift
+import Foundation
+import os.log
+
+actor KixagoClient {
+    private let apiKey: String
+    private let baseURL: URL
+    private let session: URLSession
+    private let logger = Logger(subsystem: "com.kixago", category: "api")
+    
+    private lazy var decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+    
+    init(apiKey: String, baseURL: String = "https://api.kixago.com") {
+        self.apiKey = apiKey
+        self.baseURL = URL(string: baseURL)!
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        self.session = URLSession(configuration: config)
+    }
+    
+    /// Get risk profile for a wallet address
+    func getRiskProfile(walletAddress: String) async throws -> RiskProfileResponse {
+        guard !walletAddress.isEmpty else {
+            throw KixagoError.invalidAddress("Address cannot be empty")
+        }
+        
+        logger.info("Fetching risk profile for \(walletAddress)")
+        
+        let url = baseURL.appendingPathComponent("v1/risk-profile/\(walletAddress)")
+        
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw KixagoError.networkError(URLError(.badServerResponse))
+            }
+            
+            return try await handleResponse(data: data, response: httpResponse)
+            
+        } catch let error as KixagoError {
+            throw error
+        } catch {
+            throw KixagoError.networkError(error)
+        }
+    }
+    
+    private func handleResponse(
+        data: Data,
+        response: HTTPURLResponse
+    ) async throws -> RiskProfileResponse {
+        switch response.statusCode {
+        case 200:
+            do {
+                let profile = try decoder.decode(RiskProfileResponse.self, from: data)
+                
+                // Warn about partial failures
+                if let errors = profile.aggregationErrors, !errors.isEmpty {
+                    logger.warning("⚠️ Partial failure: \(errors.keys.joined(separator: ", "))")
+                }
+                
+                return profile
+                
+            } catch {
+                throw KixagoError.decodingError(error)
+            }
+            
+        case 400:
+            let errorMsg = try? JSONDecoder().decode([String: String].self, from: data)
+            throw KixagoError.invalidAddress(errorMsg?["error"] ?? "Invalid request")
+            
+        case 401:
+            throw KixagoError.unauthorized
+            
+        case 429:
+            let retryAfter = response.value(forHTTPHeaderField: "Retry-After")
+                .flatMap(Int.init) ?? 5
+            throw KixagoError.rateLimited(retryAfter: retryAfter)
+            
+        case 500:
+            throw KixagoError.serverError("Internal server error")
+            
+        default:
+            let errorMsg = try? JSONDecoder().decode([String: String].self, from: data)
+            throw KixagoError.apiError(
+                status: response.statusCode,
+                message: errorMsg?["error"] ?? "Unknown error"
+            )
+        }
+    }
+}
+
+// Usage Example
+Task {
+    do {
+        let client = KixagoClient(
+            apiKey: ProcessInfo.processInfo.environment["KIXAGO_API_KEY"] ?? ""
+        )
+        
+        let profile = try await client.getRiskProfile(
+            walletAddress: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+        )
+        
+        if let score = profile.defiScore {
+            print("DeFi Score: \(score.defiScore)")
+            print("Risk Level: \(score.riskLevel)")
+        }
+        print("Health Factor: \(String(format: "%.2f", profile.globalHealthFactor))")
+        
+    } catch {
+        print("Error: \(error.localizedDescription)")
+    }
+}
+```
+
+---
+
+## Caching Implementation
+
+### Example 4: In-Memory Cache with NSCache
+
+```swift
+// CachedKixagoClient.swift
+import Foundation
+
+actor CachedKixagoClient {
+    private let client: KixagoClient
+    private let cache = NSCache<NSString, CachedProfile>()
+    private let cacheTTL: TimeInterval = 30 // 30 seconds
+    
+    init(apiKey: String) {
+        self.client = KixagoClient(apiKey: apiKey)
+        
+        // Configure cache limits
+        cache.countLimit = 100
+        cache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+    }
+    
+    func getRiskProfile(walletAddress: String) async throws -> RiskProfileResponse {
+        let cacheKey = NSString(string: walletAddress)
+        
+        // Check cache
+        if let cached = cache.object(forKey: cacheKey),
+           cached.isValid {
+            print("✅ Cache HIT for \(walletAddress)")
+            return cached.profile
+        }
+        
+        print("❌ Cache MISS for \(walletAddress)")
+        
+        // Fetch from API
+        let profile = try await client.getRiskProfile(walletAddress: walletAddress)
+        
+        // Cache the result
+        cache.setObject(
+            CachedProfile(profile: profile, ttl: cacheTTL),
+            forKey: cacheKey
+        )
+        
+        return profile
+    }
+}
+
+// Cache wrapper class
+private class CachedProfile {
+    let profile: RiskProfileResponse
+    let timestamp: Date
+    let ttl: TimeInterval
+    
+    init(profile: RiskProfileResponse, ttl: TimeInterval) {
+        self.profile = profile
+        self.timestamp = Date()
+        self.ttl = ttl
+    }
+    
+    var isValid: Bool {
+        Date().timeIntervalSince(timestamp) < ttl
+    }
+}
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 5: Credit Underwriting Service
+
+```swift
+// UnderwritingService.swift
+import Foundation
+
+enum Decision: String {
+    case approved = "APPROVED"
+    case declined = "DECLINED"
+    case manualReview = "MANUAL_REVIEW"
+}
+
+struct UnderwritingDecision {
+    let decision: Decision
+    let reason: String
+    let defiScore: Int?
+    let riskCategory: String?
+    let maxLoanAmount: Double?
+    let conditions: [String]
+    
+    static func approved(
+        reason: String,
+        score: Int,
+        category: String,
+        maxLoan: Double
+    ) -> UnderwritingDecision {
+        UnderwritingDecision(
+            decision: .approved,
+            reason: reason,
+            defiScore: score,
+            riskCategory: category,
+            maxLoanAmount: maxLoan,
+            conditions: []
+        )
+    }
+    
+    static func declined(reason: String, score: Int?) -> UnderwritingDecision {
+        UnderwritingDecision(
+            decision: .declined,
+            reason: reason,
+            defiScore: score,
+            riskCategory: nil,
+            maxLoanAmount: nil,
+            conditions: []
+        )
+    }
+    
+    static func manualReview(
+        reason: String,
+        score: Int?,
+        conditions: [String]
+    ) -> UnderwritingDecision {
+        UnderwritingDecision(
+            decision: .manualReview,
+            reason: reason,
+            defiScore: score,
+            riskCategory: nil,
+            maxLoanAmount: nil,
+            conditions: conditions
+        )
+    }
+}
+
+actor UnderwritingService {
+    private let client: KixagoClient
+    
+    init(client: KixagoClient) {
+        self.client = client
+    }
+    
+    func underwrite(
+        walletAddress: String,
+        requestedLoanAmount: Double
+    ) async -> UnderwritingDecision {
+        // Fetch DeFi profile
+        let profile: RiskProfileResponse
+        do {
+            profile = try await client.getRiskProfile(walletAddress: walletAddress)
+        } catch {
+            return .manualReview(
+                reason: "Error fetching DeFi profile - manual review required",
+                score: nil,
+                conditions: []
+            )
+        }
+        
+        // Check if wallet has DeFi history
+        guard let defiScore = profile.defiScore else {
+            return .declined(
+                reason: "No DeFi lending history found",
+                score: nil
+            )
+        }
+        
+        let score = defiScore.defiScore
+        let riskCategory = defiScore.riskCategory
+        let healthFactor = profile.globalHealthFactor
+        let collateral = profile.totalCollateralUsd
+        
+        // Rule 1: Minimum credit score
+        if score < 550 {
+            return .declined(
+                reason: "DeFi credit score too low: \(score)",
+                score: score
+            )
+        }
+        
+        // Rule 2: Health factor requirement
+        if healthFactor > 0 && healthFactor < 1.5 {
+            return .declined(
+                reason: String(format: "Health factor too low: %.2f (minimum 1.5)", healthFactor),
+                score: score
+            )
+        }
+        
+        // Rule 3: Collateral requirement (2x loan amount)
+        let minCollateral = requestedLoanAmount * 2
+        if collateral < minCollateral {
+            return .declined(
+                reason: String(format: "Insufficient collateral. Need $%.0f, have $%.0f",
+                             minCollateral, collateral),
+                score: score
+            )
+        }
+        
+        // Rule 4: Risk category checks
+        if riskCategory == "URGENT_ACTION_REQUIRED" {
+            return .declined(
+                reason: "Critical risk factors detected - imminent liquidation risk",
+                score: score
+            )
+        }
+        
+        if riskCategory == "HIGH_RISK" {
+            return .manualReview(
+                reason: "High risk category - requires underwriter review",
+                score: score,
+                conditions: defiScore.recommendations.immediate
+            )
+        }
+        
+        // Calculate max loan amount (50% of collateral)
+        let maxLoan = collateral * 0.5
+        
+        if requestedLoanAmount > maxLoan {
+            return .manualReview(
+                reason: "Requested amount exceeds max (50% of collateral)",
+                score: score,
+                conditions: []
+            )
+        }
+        
+        // APPROVED!
+        return .approved(
+            reason: "Strong DeFi profile - Score \(score), Risk: \(riskCategory)",
+            score: score,
+            category: riskCategory,
+            maxLoan: maxLoan
+        )
+    }
+}
+
+// Usage
+Task {
+    let client = KixagoClient(
+        apiKey: ProcessInfo.processInfo.environment["KIXAGO_API_KEY"] ?? ""
+    )
+    let service = UnderwritingService(client: client)
+    
+    let decision = await service.underwrite(
+        walletAddress: "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+        requestedLoanAmount: 500_000
+    )
+    
+    print("Decision: \(decision.decision.rawValue)")
+    print("Reason: \(decision.reason)")
+}
+```
+
+---
+
+### Example 6: SwiftUI Portfolio Monitoring App
+
+```swift
+// PortfolioViewModel.swift
+import SwiftUI
+import Combine
+
+@MainActor
+class PortfolioViewModel: ObservableObject {
+    @Published var walletAddress = ""
+    @Published var profile: RiskProfileResponse?
+    @Published var isLoading = false
+    @Published var error: String?
+    
+    private let client: KixagoClient
+    
+    init(apiKey: String) {
+        self.client = KixagoClient(apiKey: apiKey)
+    }
+    
+    func loadProfile() async {
+        isLoading = true
+        error = nil
+        
+        defer { isLoading = false }
+        
+        do {
+            profile = try await client.getRiskProfile(walletAddress: walletAddress)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+// PortfolioView.swift
+struct PortfolioView: View {
+    @StateObject private var viewModel: PortfolioViewModel
+    
+    init(apiKey: String) {
+        _viewModel = StateObject(wrappedValue: PortfolioViewModel(apiKey: apiKey))
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Wallet input
+                TextField("Enter wallet address or ENS", text: $viewModel.walletAddress)
+                    .textFieldStyle(.roundedBorder)
+                    .autocapitalization(.none)
+                    .padding()
+                
+                Button("Check Credit Score") {
+                    Task {
+                        await viewModel.loadProfile()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isLoading || viewModel.walletAddress.isEmpty)
+                
+                // Loading state
+                if viewModel.isLoading {
+                    ProgressView("Analyzing DeFi positions...")
+                }
+                
+                // Error state
+                if let error = viewModel.error {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+                
+                // Success state
+                if let profile = viewModel.profile {
+                    ProfileCard(profile: profile)
+                }
+                
+                Spacer()
+            }
+            .navigationTitle("DeFi Credit Score")
+        }
+    }
+}
+
+struct ProfileCard: View {
+    let profile: RiskProfileResponse
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Credit Score
+            if let score = profile.defiScore {
+                HStack {
+                    Text("\(score.defiScore)")
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundColor(colorForScore(score.color))
+                    
+                    VStack(alignment: .leading) {
+                        Text(score.riskLevel)
+                            .font(.headline)
+                        Text(score.riskCategory)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // Portfolio Stats
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Collateral")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("$\(formatted(profile.totalCollateralUsd))")
+                        .font(.headline)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing) {
+                    Text("Debt")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("$\(formatted(profile.totalBorrowedUsd))")
+                        .font(.headline)
+                }
+            }
+            
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Health Factor")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.2f", profile.globalHealthFactor))
+                        .font(.headline)
+                        .foregroundColor(healthFactorColor(profile.globalHealthFactor))
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing) {
+                    Text("LTV")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f%%", profile.globalLtv))
+                        .font(.headline)
+                }
+            }
+            
+            // Recommendations
+            if let recommendations = profile.defiScore?.recommendations,
+               !recommendations.immediate.isEmpty {
+                Divider()
+                
+                Text("⚠️ Immediate Actions")
+                    .font(.headline)
+                
+                ForEach(recommendations.immediate, id: \.self) { action in
+                    Text("• \(action)")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .padding()
+    }
+    
+    private func formatted(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "0"
+    }
+    
+    private func colorForScore(_ colorName: String) -> Color {
+        switch colorName {
+        case "green": return .green
+        case "blue": return .blue
+        case "yellow": return .yellow
+        case "orange": return .orange
+        case "red": return .red
+        default: return .primary
+        }
+    }
+    
+    private func healthFactorColor(_ hf: Double) -> Color {
+        if hf >= 2.0 { return .green }
+        if hf >= 1.5 { return .blue }
+        if hf >= 1.2 { return .yellow }
+        if hf >= 1.0 { return .orange }
+        return .red
+    }
+}
+```
+
+---
+
+## Concurrent Processing
+
+### Example 7: Batch Fetching with TaskGroup
+
+```swift
+// BatchProcessor.swift
+import Foundation
+
+actor BatchProcessor {
+    private let client: KixagoClient
+    
+    init(client: KixagoClient) {
+        self.client = client
+    }
+    
+    func getMultipleProfiles(
+        walletAddresses: [String]
+    ) async -> [String: Result<RiskProfileResponse, Error>] {
+        await withTaskGroup(
+            of: (String, Result<RiskProfileResponse, Error>).self
+        ) { group in
+            // Add tasks for each wallet
+            for address in walletAddresses {
+                group.addTask {
+                    do {
+                        let profile = try await self.client.getRiskProfile(
+                            walletAddress: address
+                        )
+                        return (address, .success(profile))
+                    } catch {
+                        return (address, .failure(error))
+                    }
+                }
+            }
+            
+            // Collect results
+            var results: [String: Result<RiskProfileResponse, Error>] = [:]
+            for await (address, result) in group {
+                results[address] = result
+            }
+            
+            return results
+        }
+    }
+}
+
+// Usage
+Task {
+    let client = KixagoClient(
+        apiKey: ProcessInfo.processInfo.environment["KIXAGO_API_KEY"] ?? ""
+    )
+    let batch = BatchProcessor(client: client)
+    
+    let wallets = [
+        "0xWallet1...",
+        "0xWallet2...",
+        "0xWallet3..."
+    ]
+    
+    let results = await batch.getMultipleProfiles(walletAddresses: wallets)
+    
+    for (wallet, result) in results {
+        switch result {
+        case .success(let profile):
+            let score = profile.defiScore?.defiScore ?? 0
+            print("✅ \(wallet): Score \(score)")
+        case .failure(let error):
+            print("❌ \(wallet): \(error.localizedDescription)")
+        }
+    }
+}
+```
+
+---
+
+## Testing
+
+### Example 8: Unit Tests with XCTest
+
+```swift
+// KixagoClientTests.swift
+import XCTest
+@testable import KixagoExample
+
+final class KixagoClientTests: XCTestCase {
+    var mockSession: URLSessionMock!
+    var client: KixagoClient!
+    
+    override func setUp() async throws {
+        mockSession = URLSessionMock()
+        client = KixagoClient(
+            apiKey: "test-key",
+            session: mockSession
+        )
+    }
+    
+    func testGetRiskProfileSuccess() async throws {
+        // Arrange
+        let mockResponse = """
+        {
+            "wallet_address": "0xTest123",
+            "total_collateral_usd": 100000.0,
+            "total_borrowed_usd": 30000.0,
+            "global_health_factor": 3.2,
+            "global_ltv": 30.0,
+            "positions_at_risk_count": 0,
+            "last_updated": "2025-01-15T12:00:00Z",
+            "aggregation_duration": "1.234s",
+            "lending_positions": [],
+            "defi_score": {
+                "defi_score": 750,
+                "risk_level": "Very Low Risk",
+                "risk_category": "VERY_LOW_RISK",
+                "color": "green",
+                "score_breakdown": {
+                    "health_factor_score": { "component_score": 100, "weight": 0.4, "weighted_contribution": 40, "reasoning": "" },
+                    "leverage_score": { "component_score": 100, "weight": 0.3, "weighted_contribution": 30, "reasoning": "" },
+                    "diversification_score": { "component_score": 20, "weight": 0.15, "weighted_contribution": 3, "reasoning": "" },
+                    "volatility_score": { "component_score": 100, "weight": 0.1, "weighted_contribution": 10, "reasoning": "" },
+                    "protocol_risk_score": { "component_score": 95, "weight": 0.05, "weighted_contribution": 4.75, "reasoning": "" },
+                    "total_internal_score": 87.75
+                },
+                "risk_factors": [],
+                "recommendations": {
+                    "immediate": [],
+                    "short_term": [],
+                    "long_term": []
+                },
+                "liquidation_simulation": {
+                    "current_health_factor": 3.2,
+                    "liquidation_threshold": 1.0,
+                    "buffer_percentage": 220.0,
+                    "scenarios": []
+                },
+                "calculated_at": "2025-01-15T12:00:00Z"
+            }
+        }
+        """
+        
+        mockSession.mockData = mockResponse.data(using: .utf8)
+        mockSession.mockResponse = HTTPURLResponse(
+            url: URL(string: "https://api.kixago.com")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        )
+        
+        // Act
+        let profile = try await client.getRiskProfile(walletAddress: "0xTest123")
+        
+        // Assert
+        XCTAssertEqual(profile.walletAddress, "0xTest123")
+        XCTAssertEqual(profile.defiScore?.defiScore, 750)
+        XCTAssertEqual(profile.globalHealthFactor, 3.2, accuracy: 0.01)
+    }
+    
+    func testGetRiskProfileUnauthorized() async {
+        // Arrange
+        mockSession.mockResponse = HTTPURLResponse(
+            url: URL(string: "https://api.kixago.com")!,
+            statusCode: 401,
+            httpVersion: nil,
+            headerFields: nil
+        )
+        mockSession.mockData = """
+        {"error": "Invalid API key"}
+        """.data(using: .utf8)
+        
+        // Act & Assert
+        do {
+            _ = try await client.getRiskProfile(walletAddress: "0xTest123")
+            XCTFail("Expected unauthorized error")
+        } catch KixagoError.unauthorized {
+            // Expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func testRiskProfileHelperMethods() {
+        // Arrange
+        let profile = RiskProfileResponse(
+            walletAddress: "0xTest",
+            totalCollateralUsd: 100000,
+            totalBorrowedUsd: 30000,
+            globalHealthFactor: 3.2,
+            globalLtv: 30.0,
+            positionsAtRiskCount: 1,
+            lastUpdated: Date(),
+            aggregationDuration: "1s",
+            lendingPositions: [
+                LendingPosition(
+                    protocol: "Aave",
+                    protocolVersion: "V3",
+                    chain: "Ethereum",
+                    userAddress: "0xTest",
+                    collateralUsd: 100000,
+                    borrowedUsd: 30000,
+                    healthFactor: 3.2,
+                    ltvCurrent: 30.0,
+                    isAtRisk: false,
+                    collateralDetails: nil,
+                    borrowedDetails: nil,
+                    lastUpdated: Date()
+                )
+            ],
+            defiScore: nil,
+            aggregationErrors: nil
+        )
+        
+        // Act & Assert
+        XCTAssertTrue(profile.hasPositionsAtRisk)
+        XCTAssertEqual(profile.positions(forChain: "Ethereum").count, 1)
+        XCTAssertEqual(profile.collateral(forProtocol: "Aave"), 100000, accuracy: 0.01)
+    }
+}
+
+// Mock URLSession for testing
+class URLSessionMock: URLSession {
+    var mockData: Data?
+    var mockResponse: URLResponse?
+    var mockError: Error?
+    
+    override func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        if let error = mockError {
+            throw error
+        }
+        
+        return (mockData ?? Data(), mockResponse ?? URLResponse())
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use `async/await` for concurrency** - Modern Swift concurrency
+- **Use `Actor` for thread-safe clients** - Eliminate data races
+- **Implement proper error types** - Custom `LocalizedError` enum
+- **Use `Codable` for JSON** - Type-safe serialization
+- **Handle optional values** - Always unwrap safely
+- **Use `os.log` or `Logger`** - Structured logging
+- **Cache responses** - Use `NSCache` or custom actor-based cache
+- **Use environment variables** - Never hardcode API keys
+- **Write unit tests** - Mock `URLSession` for testing
+
+### ❌ DON'T
+
+- **Don't use force unwrap (`!`)** - Use optional binding or guard
+- **Don't block main thread** - Use `Task` or `async`
+- **Don't ignore errors** - Always handle with `do-catch` or `Result`
+- **Don't use `Double` for precise values** - Consider `Decimal` for money
+- **Don't expose API keys** - Use Xcode schemes or environment
+- **Don't create new URLSession per request** - Reuse session
+- **Don't skip error context** - Provide meaningful error messages
+
+---
+
+## Performance Tips
+
+### URLSession Configuration
+
+```swift
+let config = URLSessionConfiguration.default
+config.timeoutIntervalForRequest = 30
+config.timeoutIntervalForResource = 60
+config.requestCachePolicy = .useProtocolCachePolicy
+config.httpMaximumConnectionsPerHost = 4
+
+let session = URLSession(configuration: config)
+```
+
+### Efficient JSON Decoding
+
+```swift
+// Decode only what you need
+struct MinimalProfile: Codable {
+    let walletAddress: String
+    let defiScore: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case walletAddress = "wallet_address"
+        case defiScore = "defi_score"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        walletAddress = try container.decode(String.self, forKey: .walletAddress)
+        
+        // Nested score extraction
+        if let scoreContainer = try? container.nestedContainer(
+            keyedBy: ScoreCodingKeys.self,
+            forKey: .defiScore
+        ) {
+            defiScore = try scoreContainer.decode(Int.self, forKey: .score)
+        } else {
+            defiScore = nil
+        }
+    }
+    
+    private enum ScoreCodingKeys: String, CodingKey {
+        case score = "defi_score"
+    }
+}
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/kotlin" className="button button--primary button--lg">
+    🤖 Kotlin Examples
+  </a>
+  <a href="/api/examples/go" className="button button--secondary button--lg">
+    🔷 Go Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a Swift SDK?** Coming Q2 2025 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+- **iOS/macOS specific issues?** Check our [Swift Integration Guide](/guides/swift-integration)
+
+---
+
+## Why Swift for DeFi?
+
+Swift is **excellent for building crypto apps** because:
+
+- 🍎 **Native iOS/macOS development** - 150M+ potential users
+- ⚡ **Performance** - Compiled, type-safe, memory-efficient
+- 🔒 **Modern concurrency** - `async/await`, actors, structured concurrency
+- 🛡️ **Type safety** - Optionals prevent null crashes
+- 📱 **SwiftUI** - Build beautiful UIs fast
+- 🌐 **Cross-platform** - iOS, macOS, watchOS, visionOS
+
+**Popular crypto wallets using Swift:**
+- Rainbow Wallet
+- Coinbase Wallet (iOS)
+- Trust Wallet (iOS)
+- MetaMask Mobile (parts)
+
+---
+
+© 2025 Kixago, Inc. All rights reserved.
+```

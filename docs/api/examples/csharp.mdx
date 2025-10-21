@@ -1,0 +1,1192 @@
+---
+sidebar_position: 5
+title: "C# Examples"
+description: "Complete C# and .NET code examples"
+---
+
+# C# / .NET Examples
+
+Complete, production-ready code examples for integrating Kixago API in C# and .NET applications.
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# .NET CLI
+dotnet new console -n KixagoExample
+cd KixagoExample
+
+# Install required packages
+dotnet add package System.Net.Http.Json
+dotnet add package Microsoft.Extensions.Configuration
+dotnet add package Microsoft.Extensions.Configuration.Json
+dotnet add package Microsoft.Extensions.DependencyInjection
+dotnet add package Microsoft.Extensions.Http
+
+# Optional: For caching
+dotnet add package StackExchange.Redis
+
+# Optional: For ASP.NET Core
+dotnet new webapi -n KixagoApi
+```
+
+---
+
+## Environment Setup
+
+### appsettings.json
+
+```json
+{
+  "Kixago": {
+    "ApiKey": "kixakey_your_key_here",
+    "BaseUrl": "https://api.kixago.com",
+    "CacheTtlSeconds": 30
+  },
+  "Redis": {
+    "ConnectionString": "localhost:6379"
+  }
+}
+```
+
+⚠️ **For production, use User Secrets or Azure Key Vault instead!**
+
+```bash
+# Initialize user secrets
+dotnet user-secrets init
+
+# Set API key securely
+dotnet user-secrets set "Kixago:ApiKey" "kixakey_your_key_here"
+```
+
+---
+
+## Basic Examples
+
+### Example 1: Simple Request
+
+```csharp
+// Program.cs
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
+
+namespace KixagoExample
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            var apiKey = Environment.GetEnvironmentVariable("KIXAGO_API_KEY");
+            var walletAddress = "0xf0bb20865277aBd641a307eCe5Ee04E79073416C";
+            
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+            
+            var response = await client.GetFromJsonAsync<RiskProfileResponse>(
+                $"https://api.kixago.com/v1/risk-profile/{walletAddress}"
+            );
+            
+            if (response?.DeFiScore != null)
+            {
+                Console.WriteLine($"DeFi Score: {response.DeFiScore.Score}");
+                Console.WriteLine($"Risk Level: {response.DeFiScore.RiskLevel}");
+                Console.WriteLine($"Health Factor: {response.GlobalHealthFactor:F2}");
+            }
+        }
+    }
+    
+    // Basic response model
+    public record RiskProfileResponse(
+        string WalletAddress,
+        decimal TotalCollateralUsd,
+        decimal TotalBorrowedUsd,
+        decimal GlobalHealthFactor,
+        decimal GlobalLtv,
+        int PositionsAtRiskCount,
+        DeFiScore? DeFiScore,
+        List<LendingPosition> LendingPositions
+    );
+    
+    public record DeFiScore(
+        int Score,
+        string RiskLevel,
+        string RiskCategory
+    );
+    
+    public record LendingPosition(
+        string Protocol,
+        string ProtocolVersion,
+        string Chain,
+        decimal CollateralUsd,
+        decimal BorrowedUsd,
+        decimal HealthFactor,
+        bool IsAtRisk
+    );
+}
+```
+
+---
+
+### Example 2: Complete Type Definitions
+
+```csharp
+// Models/RiskProfileModels.cs
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace Kixago.Models
+{
+    public class TokenDetail
+    {
+        [JsonPropertyName("token")]
+        public string Token { get; set; } = string.Empty;
+        
+        [JsonPropertyName("amount")]
+        public decimal Amount { get; set; }
+        
+        [JsonPropertyName("usd_value")]
+        public decimal UsdValue { get; set; }
+        
+        [JsonPropertyName("token_address")]
+        public string TokenAddress { get; set; } = string.Empty;
+    }
+    
+    public class LendingPosition
+    {
+        [JsonPropertyName("protocol")]
+        public string Protocol { get; set; } = string.Empty;
+        
+        [JsonPropertyName("protocol_version")]
+        public string ProtocolVersion { get; set; } = string.Empty;
+        
+        [JsonPropertyName("chain")]
+        public string Chain { get; set; } = string.Empty;
+        
+        [JsonPropertyName("user_address")]
+        public string UserAddress { get; set; } = string.Empty;
+        
+        [JsonPropertyName("collateral_usd")]
+        public decimal CollateralUsd { get; set; }
+        
+        [JsonPropertyName("borrowed_usd")]
+        public decimal BorrowedUsd { get; set; }
+        
+        [JsonPropertyName("health_factor")]
+        public decimal HealthFactor { get; set; }
+        
+        [JsonPropertyName("ltv_current")]
+        public decimal LtvCurrent { get; set; }
+        
+        [JsonPropertyName("is_at_risk")]
+        public bool IsAtRisk { get; set; }
+        
+        [JsonPropertyName("collateral_details")]
+        public List<TokenDetail>? CollateralDetails { get; set; }
+        
+        [JsonPropertyName("borrowed_details")]
+        public List<TokenDetail>? BorrowedDetails { get; set; }
+        
+        [JsonPropertyName("last_updated")]
+        public DateTime LastUpdated { get; set; }
+    }
+    
+    public class ComponentScore
+    {
+        [JsonPropertyName("component_score")]
+        public decimal Score { get; set; }
+        
+        [JsonPropertyName("weight")]
+        public decimal Weight { get; set; }
+        
+        [JsonPropertyName("weighted_contribution")]
+        public decimal WeightedContribution { get; set; }
+        
+        [JsonPropertyName("reasoning")]
+        public string Reasoning { get; set; } = string.Empty;
+    }
+    
+    public class ScoreBreakdown
+    {
+        [JsonPropertyName("health_factor_score")]
+        public ComponentScore HealthFactorScore { get; set; } = new();
+        
+        [JsonPropertyName("leverage_score")]
+        public ComponentScore LeverageScore { get; set; } = new();
+        
+        [JsonPropertyName("diversification_score")]
+        public ComponentScore DiversificationScore { get; set; } = new();
+        
+        [JsonPropertyName("volatility_score")]
+        public ComponentScore VolatilityScore { get; set; } = new();
+        
+        [JsonPropertyName("protocol_risk_score")]
+        public ComponentScore ProtocolRiskScore { get; set; } = new();
+        
+        [JsonPropertyName("total_internal_score")]
+        public decimal TotalInternalScore { get; set; }
+    }
+    
+    public class RiskFactor
+    {
+        [JsonPropertyName("severity")]
+        public string Severity { get; set; } = string.Empty;
+        
+        [JsonPropertyName("factor")]
+        public string Factor { get; set; } = string.Empty;
+        
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
+        
+        [JsonPropertyName("impact_on_score")]
+        public int ImpactOnScore { get; set; }
+    }
+    
+    public class Recommendations
+    {
+        [JsonPropertyName("immediate")]
+        public List<string> Immediate { get; set; } = new();
+        
+        [JsonPropertyName("short_term")]
+        public List<string> ShortTerm { get; set; } = new();
+        
+        [JsonPropertyName("long_term")]
+        public List<string> LongTerm { get; set; } = new();
+    }
+    
+    public class LiquidationScenario
+    {
+        [JsonPropertyName("event")]
+        public string Event { get; set; } = string.Empty;
+        
+        [JsonPropertyName("new_health_factor")]
+        public decimal NewHealthFactor { get; set; }
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+        
+        [JsonPropertyName("time_estimate")]
+        public string? TimeEstimate { get; set; }
+        
+        [JsonPropertyName("estimated_loss")]
+        public string? EstimatedLoss { get; set; }
+    }
+    
+    public class LiquidationSimulation
+    {
+        [JsonPropertyName("current_health_factor")]
+        public decimal CurrentHealthFactor { get; set; }
+        
+        [JsonPropertyName("liquidation_threshold")]
+        public decimal LiquidationThreshold { get; set; }
+        
+        [JsonPropertyName("buffer_percentage")]
+        public decimal BufferPercentage { get; set; }
+        
+        [JsonPropertyName("scenarios")]
+        public List<LiquidationScenario> Scenarios { get; set; } = new();
+    }
+    
+    public class DeFiScore
+    {
+        [JsonPropertyName("defi_score")]
+        public int Score { get; set; }
+        
+        [JsonPropertyName("risk_level")]
+        public string RiskLevel { get; set; } = string.Empty;
+        
+        [JsonPropertyName("risk_category")]
+        public string RiskCategory { get; set; } = string.Empty;
+        
+        [JsonPropertyName("color")]
+        public string Color { get; set; } = string.Empty;
+        
+        [JsonPropertyName("score_breakdown")]
+        public ScoreBreakdown ScoreBreakdown { get; set; } = new();
+        
+        [JsonPropertyName("risk_factors")]
+        public List<RiskFactor> RiskFactors { get; set; } = new();
+        
+        [JsonPropertyName("recommendations")]
+        public Recommendations Recommendations { get; set; } = new();
+        
+        [JsonPropertyName("liquidation_simulation")]
+        public LiquidationSimulation LiquidationSimulation { get; set; } = new();
+        
+        [JsonPropertyName("calculated_at")]
+        public DateTime CalculatedAt { get; set; }
+    }
+    
+    public class RiskProfileResponse
+    {
+        [JsonPropertyName("wallet_address")]
+        public string WalletAddress { get; set; } = string.Empty;
+        
+        [JsonPropertyName("total_collateral_usd")]
+        public decimal TotalCollateralUsd { get; set; }
+        
+        [JsonPropertyName("total_borrowed_usd")]
+        public decimal TotalBorrowedUsd { get; set; }
+        
+        [JsonPropertyName("global_health_factor")]
+        public decimal GlobalHealthFactor { get; set; }
+        
+        [JsonPropertyName("global_ltv")]
+        public decimal GlobalLtv { get; set; }
+        
+        [JsonPropertyName("positions_at_risk_count")]
+        public int PositionsAtRiskCount { get; set; }
+        
+        [JsonPropertyName("last_updated")]
+        public DateTime LastUpdated { get; set; }
+        
+        [JsonPropertyName("aggregation_duration")]
+        public string AggregationDuration { get; set; } = string.Empty;
+        
+        [JsonPropertyName("lending_positions")]
+        public List<LendingPosition> LendingPositions { get; set; } = new();
+        
+        [JsonPropertyName("defi_score")]
+        public DeFiScore? DeFiScore { get; set; }
+        
+        [JsonPropertyName("aggregation_errors")]
+        public Dictionary<string, string>? AggregationErrors { get; set; }
+    }
+}
+```
+
+---
+
+### Example 3: Type-Safe Client with Error Handling
+
+```csharp
+// Services/KixagoClient.cs
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Kixago.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Kixago.Services
+{
+    public class KixagoClient : IKixagoClient
+    {
+        private readonly HttpClient _httpClient;
+        private readonly ILogger<KixagoClient> _logger;
+        
+        public KixagoClient(
+            HttpClient httpClient,
+            ILogger<KixagoClient> logger)
+        {
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+        
+        public async Task<RiskProfileResponse> GetRiskProfileAsync(
+            string walletAddress,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(walletAddress))
+                throw new ArgumentException("Wallet address cannot be empty", nameof(walletAddress));
+            
+            try
+            {
+                _logger.LogInformation("Fetching risk profile for {WalletAddress}", walletAddress);
+                
+                var response = await _httpClient.GetAsync(
+                    $"/v1/risk-profile/{walletAddress}",
+                    cancellationToken
+                );
+                
+                response.EnsureSuccessStatusCode();
+                
+                var profile = await response.Content.ReadFromJsonAsync<RiskProfileResponse>(
+                    cancellationToken: cancellationToken
+                );
+                
+                if (profile == null)
+                    throw new KixagoException("Failed to deserialize response");
+                
+                // Warn about partial failures
+                if (profile.AggregationErrors?.Count > 0)
+                {
+                    _logger.LogWarning(
+                        "Partial failure - some protocols failed: {Errors}",
+                        string.Join(", ", profile.AggregationErrors.Keys)
+                    );
+                }
+                
+                return profile;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error fetching risk profile for {WalletAddress}", walletAddress);
+                throw new KixagoException($"Failed to fetch risk profile: {ex.Message}", ex);
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Request timeout for {WalletAddress}", walletAddress);
+                throw new KixagoException("Request timed out", ex);
+            }
+        }
+    }
+    
+    public interface IKixagoClient
+    {
+        Task<RiskProfileResponse> GetRiskProfileAsync(
+            string walletAddress,
+            CancellationToken cancellationToken = default
+        );
+    }
+    
+    public class KixagoException : Exception
+    {
+        public KixagoException(string message) : base(message) { }
+        public KixagoException(string message, Exception innerException) 
+            : base(message, innerException) { }
+    }
+}
+```
+
+---
+
+### Example 4: Dependency Injection Setup
+
+```csharp
+// Program.cs (ASP.NET Core)
+using Kixago.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kixago client
+builder.Services.AddHttpClient<IKixagoClient, KixagoClient>((services, client) =>
+{
+    var config = services.GetRequiredService<IConfiguration>();
+    var apiKey = config["Kixago:ApiKey"];
+    var baseUrl = config["Kixago:BaseUrl"] ?? "https://api.kixago.com";
+    
+    client.BaseAddress = new Uri(baseUrl);
+    client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Add memory cache
+builder.Services.AddMemoryCache();
+
+// Add caching service
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+
+// Add cached client wrapper
+builder.Services.Decorate<IKixagoClient, CachedKixagoClient>();
+
+var app = builder.Build();
+
+app.MapControllers();
+app.Run();
+```
+
+---
+
+## Caching Implementation
+
+### Example 5: Memory Cache
+
+```csharp
+// Services/MemoryCacheService.cs
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
+
+namespace Kixago.Services
+{
+    public interface ICacheService
+    {
+        Task<T?> GetOrCreateAsync<T>(
+            string key,
+            Func<Task<T>> factory,
+            TimeSpan? expiration = null
+        ) where T : class;
+    }
+    
+    public class MemoryCacheService : ICacheService
+    {
+        private readonly IMemoryCache _cache;
+        
+        public MemoryCacheService(IMemoryCache cache)
+        {
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        }
+        
+        public async Task<T?> GetOrCreateAsync<T>(
+            string key,
+            Func<Task<T>> factory,
+            TimeSpan? expiration = null
+        ) where T : class
+        {
+            if (_cache.TryGetValue<T>(key, out var cached))
+            {
+                return cached;
+            }
+            
+            var value = await factory();
+            
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(expiration ?? TimeSpan.FromSeconds(30));
+            
+            _cache.Set(key, value, cacheOptions);
+            
+            return value;
+        }
+    }
+}
+
+// Services/CachedKixagoClient.cs
+using System.Threading;
+using System.Threading.Tasks;
+using Kixago.Models;
+
+namespace Kixago.Services
+{
+    public class CachedKixagoClient : IKixagoClient
+    {
+        private readonly IKixagoClient _innerClient;
+        private readonly ICacheService _cache;
+        
+        public CachedKixagoClient(
+            IKixagoClient innerClient,
+            ICacheService cache)
+        {
+            _innerClient = innerClient;
+            _cache = cache;
+        }
+        
+        public async Task<RiskProfileResponse> GetRiskProfileAsync(
+            string walletAddress,
+            CancellationToken cancellationToken = default)
+        {
+            var cacheKey = $"kixago:profile:{walletAddress}";
+            
+            var result = await _cache.GetOrCreateAsync(
+                cacheKey,
+                () => _innerClient.GetRiskProfileAsync(walletAddress, cancellationToken),
+                TimeSpan.FromSeconds(30)
+            );
+            
+            return result ?? throw new KixagoException("Failed to get profile");
+        }
+    }
+}
+```
+
+---
+
+### Example 6: Redis Cache (Production)
+
+```csharp
+// Services/RedisCacheService.cs
+using System;
+using System.Text.Json;
+using System.Threading.Tasks;
+using StackExchange.Redis;
+
+namespace Kixago.Services
+{
+    public class RedisCacheService : ICacheService
+    {
+        private readonly IConnectionMultiplexer _redis;
+        private readonly IDatabase _db;
+        
+        public RedisCacheService(IConnectionMultiplexer redis)
+        {
+            _redis = redis ?? throw new ArgumentNullException(nameof(redis));
+            _db = _redis.GetDatabase();
+        }
+        
+        public async Task<T?> GetOrCreateAsync<T>(
+            string key,
+            Func<Task<T>> factory,
+            TimeSpan? expiration = null
+        ) where T : class
+        {
+            var cacheKey = $"kixago:profile:{key}";
+            
+            // Try get from cache
+            var cached = await _db.StringGetAsync(cacheKey);
+            if (cached.HasValue)
+            {
+                return JsonSerializer.Deserialize<T>(cached.ToString());
+            }
+            
+            // Fetch fresh data
+            var value = await factory();
+            
+            // Cache result
+            var serialized = JsonSerializer.Serialize(value);
+            await _db.StringSetAsync(
+                cacheKey,
+                serialized,
+                expiration ?? TimeSpan.FromSeconds(30)
+            );
+            
+            return value;
+        }
+    }
+}
+
+// Program.cs - Register Redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var connectionString = config["Redis:ConnectionString"];
+    return ConnectionMultiplexer.Connect(connectionString);
+});
+
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+```
+
+---
+
+## Real-World Use Cases
+
+### Example 7: Credit Underwriting Service
+
+```csharp
+// Services/UnderwritingService.cs
+using System;
+using System.Threading.Tasks;
+using Kixago.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Kixago.Services
+{
+    public enum Decision
+    {
+        Approved,
+        Declined,
+        ManualReview
+    }
+    
+    public record UnderwritingDecision(
+        Decision Decision,
+        string Reason,
+        int? DeFiScore = null,
+        string? RiskCategory = null,
+        decimal? MaxLoanAmount = null,
+        string[]? Conditions = null
+    );
+    
+    public class UnderwritingService
+    {
+        private readonly IKixagoClient _kixago;
+        private readonly ILogger<UnderwritingService> _logger;
+        
+        public UnderwritingService(
+            IKixagoClient kixago,
+            ILogger<UnderwritingService> logger)
+        {
+            _kixago = kixago;
+            _logger = logger;
+        }
+        
+        public async Task<UnderwritingDecision> UnderwriteAsync(
+            string walletAddress,
+            decimal requestedLoanAmount)
+        {
+            try
+            {
+                var profile = await _kixago.GetRiskProfileAsync(walletAddress);
+                
+                // Check if wallet has DeFi history
+                if (profile.DeFiScore == null)
+                {
+                    return new UnderwritingDecision(
+                        Decision.Declined,
+                        "No DeFi lending history found"
+                    );
+                }
+                
+                var score = profile.DeFiScore.Score;
+                var riskCategory = profile.DeFiScore.RiskCategory;
+                var healthFactor = profile.GlobalHealthFactor;
+                var collateral = profile.TotalCollateralUsd;
+                
+                // Rule 1: Minimum credit score
+                if (score < 550)
+                {
+                    return new UnderwritingDecision(
+                        Decision.Declined,
+                        $"DeFi credit score too low: {score}",
+                        DeFiScore: score
+                    );
+                }
+                
+                // Rule 2: Health factor requirement
+                if (healthFactor > 0 && healthFactor < 1.5m)
+                {
+                    return new UnderwritingDecision(
+                        Decision.Declined,
+                        $"Health factor too low: {healthFactor:F2} (minimum 1.5)",
+                        DeFiScore: score
+                    );
+                }
+                
+                // Rule 3: Collateral requirement (2x loan amount)
+                var minCollateral = requestedLoanAmount * 2;
+                if (collateral < minCollateral)
+                {
+                    return new UnderwritingDecision(
+                        Decision.Declined,
+                        $"Insufficient collateral. Need ${minCollateral:N0}, have ${collateral:N0}",
+                        DeFiScore: score
+                    );
+                }
+                
+                // Rule 4: Risk category checks
+                if (riskCategory == "URGENT_ACTION_REQUIRED")
+                {
+                    return new UnderwritingDecision(
+                        Decision.Declined,
+                        "Critical risk factors detected - imminent liquidation risk",
+                        DeFiScore: score,
+                        RiskCategory: riskCategory
+                    );
+                }
+                
+                if (riskCategory == "HIGH_RISK")
+                {
+                    return new UnderwritingDecision(
+                        Decision.ManualReview,
+                        "High risk category - requires underwriter review",
+                        DeFiScore: score,
+                        RiskCategory: riskCategory,
+                        Conditions: profile.DeFiScore.Recommendations.Immediate.ToArray()
+                    );
+                }
+                
+                // Calculate max loan amount (50% of collateral)
+                var maxLoan = collateral * 0.5m;
+                
+                if (requestedLoanAmount > maxLoan)
+                {
+                    return new UnderwritingDecision(
+                        Decision.ManualReview,
+                        "Requested amount exceeds max (50% of collateral)",
+                        DeFiScore: score,
+                        MaxLoanAmount: maxLoan
+                    );
+                }
+                
+                // APPROVED!
+                return new UnderwritingDecision(
+                    Decision.Approved,
+                    $"Strong DeFi profile - Score {score}, Risk: {riskCategory}",
+                    DeFiScore: score,
+                    RiskCategory: riskCategory,
+                    MaxLoanAmount: maxLoan,
+                    Conditions: Array.Empty<string>()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Underwriting error for {WalletAddress}", walletAddress);
+                
+                return new UnderwritingDecision(
+                    Decision.ManualReview,
+                    "Error fetching DeFi profile - manual review required"
+                );
+            }
+        }
+    }
+}
+```
+
+---
+
+### Example 8: ASP.NET Core API Controller
+
+```csharp
+// Controllers/WalletController.cs
+using Microsoft.AspNetCore.Mvc;
+using Kixago.Services;
+using System.Threading.Tasks;
+
+namespace Kixago.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class WalletController : ControllerBase
+    {
+        private readonly IKixagoClient _kixago;
+        private readonly ILogger<WalletController> _logger;
+        
+        public WalletController(
+            IKixagoClient kixago,
+            ILogger<WalletController> logger)
+        {
+            _kixago = kixago;
+            _logger = logger;
+        }
+        
+        [HttpGet("{address}")]
+        public async Task<IActionResult> GetRiskProfile(string address)
+        {
+            try
+            {
+                var profile = await _kixago.GetRiskProfileAsync(address);
+                return Ok(profile);
+            }
+            catch (KixagoException ex)
+            {
+                _logger.LogError(ex, "Failed to fetch risk profile for {Address}", address);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+    }
+    
+    [ApiController]
+    [Route("api/[controller]")]
+    public class UnderwritingController : ControllerBase
+    {
+        private readonly UnderwritingService _underwriting;
+        
+        public UnderwritingController(UnderwritingService underwriting)
+        {
+            _underwriting = underwriting;
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> Underwrite([FromBody] UnderwriteRequest request)
+        {
+            var decision = await _underwriting.UnderwriteAsync(
+                request.WalletAddress,
+                request.LoanAmount
+            );
+            
+            return Ok(decision);
+        }
+    }
+    
+    public record UnderwriteRequest(
+        string WalletAddress,
+        decimal LoanAmount
+    );
+}
+```
+
+---
+
+### Example 9: Background Service (Monitoring Bot)
+
+```csharp
+// Services/LiquidationMonitorService.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace Kixago.Services
+{
+    public class MonitoringOptions
+    {
+        public List<string> WalletsToMonitor { get; set; } = new();
+        public int CheckIntervalMinutes { get; set; } = 5;
+    }
+    
+    public class LiquidationMonitorService : BackgroundService
+    {
+        private readonly IKixagoClient _kixago;
+        private readonly ILogger<LiquidationMonitorService> _logger;
+        private readonly MonitoringOptions _options;
+        
+        public LiquidationMonitorService(
+            IKixagoClient kixago,
+            ILogger<LiquidationMonitorService> logger,
+            IOptions<MonitoringOptions> options)
+        {
+            _kixago = kixago;
+            _logger = logger;
+            _options = options.Value;
+        }
+        
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("Liquidation monitor service started");
+            
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await MonitorWalletsAsync(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in monitoring loop");
+                }
+                
+                await Task.Delay(
+                    TimeSpan.FromMinutes(_options.CheckIntervalMinutes),
+                    stoppingToken
+                );
+            }
+        }
+        
+        private async Task MonitorWalletsAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Monitoring {Count} wallets...", _options.WalletsToMonitor.Count);
+            
+            var alerts = new List<LiquidationAlert>();
+            
+            foreach (var wallet in _options.WalletsToMonitor)
+            {
+                try
+                {
+                    var profile = await _kixago.GetRiskProfileAsync(wallet, cancellationToken);
+                    
+                    if (profile.DeFiScore == null || profile.TotalCollateralUsd == 0)
+                        continue;
+                    
+                    var buffer = profile.DeFiScore.LiquidationSimulation.BufferPercentage;
+                    
+                    if (buffer < 5)
+                    {
+                        alerts.Add(new LiquidationAlert
+                        {
+                            Wallet = wallet,
+                            Urgency = "CRITICAL",
+                            Buffer = buffer,
+                            Collateral = profile.TotalCollateralUsd,
+                            Message = $"🚨 CRITICAL: Only {buffer:F1}% buffer remaining!"
+                        });
+                        
+                        _logger.LogCritical(
+                            "CRITICAL: {Wallet} - {Buffer:F1}% buffer, ${Collateral:N0} at risk",
+                            wallet, buffer, profile.TotalCollateralUsd
+                        );
+                    }
+                    else if (buffer < 10)
+                    {
+                        alerts.Add(new LiquidationAlert
+                        {
+                            Wallet = wallet,
+                            Urgency = "HIGH",
+                            Buffer = buffer,
+                            Collateral = profile.TotalCollateralUsd,
+                            Message = $"⚠️ HIGH RISK: {buffer:F1}% buffer"
+                        });
+                        
+                        _logger.LogWarning(
+                            "HIGH: {Wallet} - {Buffer:F1}% buffer",
+                            wallet, buffer
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error monitoring {Wallet}", wallet);
+                }
+            }
+            
+            if (alerts.Any())
+            {
+                // Send notifications (email, Slack, etc.)
+                await SendAlertsAsync(alerts);
+            }
+            
+            _logger.LogInformation("Monitoring complete. Found {Count} alerts.", alerts.Count);
+        }
+        
+        private async Task SendAlertsAsync(List<LiquidationAlert> alerts)
+        {
+            // Implement your notification logic here
+            // Example: Send to Slack, email, SMS, etc.
+            await Task.CompletedTask;
+        }
+    }
+    
+    public class LiquidationAlert
+    {
+        public string Wallet { get; set; } = string.Empty;
+        public string Urgency { get; set; } = string.Empty;
+        public decimal Buffer { get; set; }
+        public decimal Collateral { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+}
+
+// Program.cs - Register background service
+builder.Services.Configure<MonitoringOptions>(
+    builder.Configuration.GetSection("Monitoring")
+);
+
+builder.Services.AddHostedService<LiquidationMonitorService>();
+```
+
+---
+
+## Testing
+
+### Example 10: Unit Tests (xUnit)
+
+```csharp
+// Tests/KixagoClientTests.cs
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Kixago.Models;
+using Kixago.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using Moq.Protected;
+using Xunit;
+
+namespace Kixago.Tests
+{
+    public class KixagoClientTests
+    {
+        [Fact]
+        public async Task GetRiskProfile_Success_ReturnsProfile()
+        {
+            // Arrange
+            var mockResponse = new RiskProfileResponse
+            {
+                WalletAddress = "0xTest...",
+                TotalCollateralUsd = 100000m,
+                GlobalHealthFactor = 3.2m,
+                DeFiScore = new DeFiScore
+                {
+                    Score = 750,
+                    RiskLevel = "Very Low Risk"
+                }
+            };
+            
+            var mockHttp = new Mock<HttpMessageHandler>();
+            mockHttp.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(JsonSerializer.Serialize(mockResponse))
+                });
+            
+            var httpClient = new HttpClient(mockHttp.Object)
+            {
+                BaseAddress = new Uri("https://api.kixago.com")
+            };
+            
+            var client = new KixagoClient(httpClient, NullLogger<KixagoClient>.Instance);
+            
+            // Act
+            var result = await client.GetRiskProfileAsync("0xTest...");
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal("0xTest...", result.WalletAddress);
+            Assert.Equal(750, result.DeFiScore?.Score);
+        }
+        
+        [Fact]
+        public async Task GetRiskProfile_InvalidAddress_ThrowsArgumentException()
+        {
+            // Arrange
+            var httpClient = new HttpClient { BaseAddress = new Uri("https://api.kixago.com") };
+            var client = new KixagoClient(httpClient, NullLogger<KixagoClient>.Instance);
+            
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(
+                () => client.GetRiskProfileAsync(string.Empty)
+            );
+        }
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Use dependency injection** - Register services in DI container
+- **Implement caching** - Use IMemoryCache or Redis
+- **Use async/await** - Don't block threads
+- **Type-safe models** - Use records or classes with proper JSON attributes
+- **Structured logging** - Use ILogger with structured data
+- **Configure timeouts** - Set HttpClient.Timeout appropriately
+- **Use User Secrets** - Don't commit API keys
+- **Handle cancellation** - Support CancellationToken
+
+### ❌ DON'T
+
+- **Don't create HttpClient in method** - Use IHttpClientFactory
+- **Don't expose API keys** - Use configuration and secrets
+- **Don't ignore aggregation errors** - Log warnings
+- **Don't block async** - Never use .Result or .Wait()
+- **Don't skip error handling** - Use try/catch appropriately
+- **Don't hardcode URLs** - Use appsettings.json
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/examples/javascript" className="button button--primary button--lg">
+    📜 JavaScript Examples
+  </a>
+  <a href="/api/examples/python" className="button button--secondary button--lg">
+    🐍 Python Examples
+  </a>
+  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+    ✨ Best Practices
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Code not working?** Email api@kixago.com with code snippet
+- **Want a .NET SDK?** Coming Q2 2026 - watch our [GitHub](https://github.com/kixago)
+- **Found a bug?** [Report it](https://github.com/kixago/api-issues)
+```
+
+---
+
+## Update Your Sidebar
+
+Add C# to your sidebar:
+
+```typescript
+// sidebars.ts
+{
+  type: 'category',
+  label: 'Code Examples',
+  collapsed: true,
+  items: [
+    'api/examples/javascript',
+    'api/examples/python',
+    'api/examples/go',
+    'api/examples/php',
+    'api/examples/csharp',  // ← ADD THIS
+  ],
+},
+```
+---

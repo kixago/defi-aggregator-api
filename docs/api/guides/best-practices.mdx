@@ -1,0 +1,1324 @@
+---
+sidebar_position: 2
+title: "Best Practices"
+description: "Production-ready patterns and optimization strategies"
+---
+
+# Best Practices
+
+A comprehensive guide to building production-ready applications with the Kixago API.
+
+---
+
+## Overview
+
+This guide covers:
+
+- 🚀 **Performance Optimization** - Speed up your application
+- 🔒 **Security Best Practices** - Protect your API keys and data
+- 💾 **Caching Strategies** - Reduce API calls and costs
+- ⚡ **Rate Limiting** - Stay within your plan limits
+- 🏗️ **Code Organization** - Structure your integration
+- 🧪 **Testing Strategies** - Build confidence in your code
+- 📊 **Monitoring & Observability** - Track usage and errors
+- 🚢 **Production Deployment** - Launch checklist
+
+---
+
+## Performance Optimization
+
+### 1. Implement Caching (Critical)
+
+**The #1 performance optimization:** Cache API responses for at least 30 seconds.
+
+#### Why Cache?
+
+- ✅ **Faster responses:** < 100ms (cached) vs 1-5s (fresh)
+- ✅ **Lower costs:** Reduce API usage by 90%+
+- ✅ **Better UX:** Instant page loads
+- ✅ **Rate limit protection:** Stay within your plan
+
+#### Cache Strategy
+
+The Kixago API caches responses for **30 seconds**. You should do the same (or longer).
+
+**Simple in-memory cache:**
+
+```typescript
+// Simple TTL cache
+class Cache<T> {
+  private store = new Map<string, { data: T; expires: number }>();
+  
+  get(key: string): T | null {
+    const entry = this.store.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() > entry.expires) {
+      this.store.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+  
+  set(key: string, data: T, ttlSeconds: number = 30): void {
+    this.store.set(key, {
+      data,
+      expires: Date.now() + ttlSeconds * 1000
+    });
+  }
+}
+
+// Usage
+const cache = new Cache<RiskProfileResponse>();
+
+async function getCachedProfile(address: string) {
+  const cached = cache.get(address);
+  if (cached) return cached;
+  
+  const fresh = await getRiskProfile(address);
+  cache.set(address, fresh, 30);
+  return fresh;
+}
+```
+
+**Production-ready Redis cache:**
+
+```typescript
+// Redis cache
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL);
+
+async function getCachedProfile(address: string) {
+  // Try cache
+  const cached = await redis.get(`kixago:profile:${address}`);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
+  // Fetch fresh
+  const fresh = await getRiskProfile(address);
+  
+  // Cache for 30 seconds
+  await redis.setex(
+    `kixago:profile:${address}`,
+    30,
+    JSON.stringify(fresh)
+  );
+  
+  return fresh;
+}
+```
+
+---
+
+### 2. Use Concurrent Requests
+
+When fetching multiple profiles, **don't fetch sequentially** - use concurrency.
+
+#### ❌ Bad (Sequential)
+
+```typescript
+// Takes 10-15 seconds for 5 wallets
+const profiles = [];
+for (const wallet of wallets) {
+  profiles.push(await getRiskProfile(wallet));
+}
+```
+
+#### ✅ Good (Concurrent)
+
+```typescript
+// Takes 2-3 seconds for 5 wallets
+const profiles = await Promise.all(
+  wallets.map(wallet => getRiskProfile(wallet))
+);
+```
+
+**With rate limiting:**
+
+```typescript
+// Batch with rate limit (10 req/sec)
+async function batchFetch(wallets: string[], concurrency = 10) {
+  const results = [];
+  
+  for (let i = 0; i < wallets.length; i += concurrency) {
+    const batch = wallets.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(wallet => getRiskProfile(wallet))
+    );
+    results.push(...batchResults);
+    
+    // Rate limit delay (if needed)
+    if (i + concurrency < wallets.length) {
+      await sleep(1000); // 1 second between batches
+    }
+  }
+  
+  return results;
+}
+```
+
+---
+
+### 3. Optimize Data Transfer
+
+Only request and transfer data you actually need.
+
+#### Cache Headers
+
+Check the `X-Cache-Status` header to know if data is fresh:
+
+```typescript
+const response = await fetch(url, { headers: { 'X-API-Key': apiKey } });
+const cacheStatus = response.headers.get('X-Cache-Status');
+
+if (cacheStatus === 'HIT') {
+  console.log('Served from cache (fast)');
+} else {
+  console.log('Fresh data from blockchain');
+}
+```
+
+#### Selective Parsing
+
+If you only need the score, don't parse the entire response:
+
+```typescript
+// ❌ Bad - parse everything
+const profile = await response.json();
+const score = profile.defi_score.defi_score;
+
+// ✅ Better - stream parse (for very large responses)
+const text = await response.text();
+const scoreMatch = text.match(/"defi_score":(\d+)/);
+const score = scoreMatch ? parseInt(scoreMatch[1]) : null;
+```
+
+---
+
+### 4. Implement Timeouts
+
+Always set appropriate timeouts to prevent hanging requests.
+
+```typescript
+// 30-second timeout (matches API server timeout)
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000);
+
+try {
+  const response = await fetch(url, {
+    headers: { 'X-API-Key': apiKey },
+    signal: controller.signal
+  });
+  
+  return await response.json();
+  
+} finally {
+  clearTimeout(timeout);
+}
+```
+
+**Or using built-in timeout:**
+
+```typescript
+// Node.js 17.5+, modern browsers
+const response = await fetch(url, {
+  headers: { 'X-API-Key': apiKey },
+  signal: AbortSignal.timeout(30000)
+});
+```
+
+---
+
+## Security Best Practices
+
+### 1. Protect API Keys (Critical)
+
+**Never expose API keys in:**
+
+- ❌ Client-side JavaScript
+- ❌ Git repositories
+- ❌ Public URLs
+- ❌ Error messages
+- ❌ Logs
+- ❌ Screenshots
+
+#### ✅ Use Environment Variables
+
+```bash
+# .env (add to .gitignore!)
+KIXAGO_API_KEY=kixakey_your_key_here
+```
+
+```typescript
+// ✅ Correct
+const apiKey = process.env.KIXAGO_API_KEY;
+
+// ❌ Wrong - hardcoded
+const apiKey = 'kixakey_7eBHF9Ndxd...';
+```
+
+#### ✅ Server-Side Proxy Pattern
+
+**Never call Kixago API directly from browser:**
+
+```typescript
+// ❌ WRONG - Browser can see API key
+// frontend.js
+const response = await fetch('https://api.kixago.com/v1/risk-profile/0x...', {
+  headers: { 'X-API-Key': EXPOSED_KEY } // ⚠️ Visible in DevTools!
+});
+```
+
+**✅ Correct - Proxy through your backend:**
+
+```typescript
+// ✅ Frontend (no API key)
+const response = await fetch('/api/wallet/0x...');
+
+// ✅ Backend (API key safe)
+app.get('/api/wallet/:address', async (req, res) => {
+  const profile = await kixagoClient.getRiskProfile(req.params.address);
+  res.json(profile);
+});
+```
+
+---
+
+### 2. Validate All Inputs
+
+Always validate wallet addresses before sending to API:
+
+```typescript
+function isValidAddress(address: string): boolean {
+  // Hex address: 0x + 40 hex chars
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    return true;
+  }
+  
+  // ENS name: ends with .eth
+  if (/^[a-z0-9-]+\.eth$/i.test(address)) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Validate before API call
+if (!isValidAddress(walletAddress)) {
+  throw new Error('Invalid wallet address format');
+}
+
+const profile = await getRiskProfile(walletAddress);
+```
+
+---
+
+### 3. Implement Rate Limiting on Your Side
+
+Even with API rate limits, implement your own to protect your infrastructure:
+
+```typescript
+// Simple rate limiter
+class RateLimiter {
+  private requests: number[] = [];
+  
+  constructor(
+    private maxRequests: number,
+    private windowMs: number
+  ) {}
+  
+  async acquire(): Promise<void> {
+    const now = Date.now();
+    
+    // Remove old requests outside window
+    this.requests = this.requests.filter(t => t > now - this.windowMs);
+    
+    if (this.requests.length >= this.maxRequests) {
+      const oldestRequest = Math.min(...this.requests);
+      const waitTime = this.windowMs - (now - oldestRequest);
+      
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      return this.acquire(); // Retry
+    }
+    
+    this.requests.push(now);
+  }
+}
+
+// Usage: 10 requests per second
+const limiter = new RateLimiter(10, 1000);
+
+async function fetchWithRateLimit(address: string) {
+  await limiter.acquire();
+  return getRiskProfile(address);
+}
+```
+
+---
+
+### 4. Sanitize Error Messages
+
+Don't leak sensitive data in error messages:
+
+```typescript
+// ❌ Bad - exposes API key
+catch (err) {
+  console.error(`Failed with key ${apiKey}: ${err}`);
+}
+
+// ✅ Good - sanitized
+catch (err) {
+  console.error('API request failed:', {
+    error: err.message,
+    statusCode: err.statusCode,
+    // No API key!
+  });
+}
+```
+
+---
+
+### 5. Use Different Keys per Environment
+
+Create separate API keys for:
+
+- **Development** - Local testing
+- **Staging** - QA environment
+- **Production** - Live application
+
+**Benefits:**
+
+- Revoke dev keys without affecting production
+- Track usage separately
+- Different rate limits per environment
+- Easier debugging
+
+```bash
+# .env.development
+KIXAGO_API_KEY=kixakey_dev_...
+
+# .env.production
+KIXAGO_API_KEY=kixakey_prod_...
+```
+
+---
+
+## Caching Strategies
+
+### Cache Layers
+
+Implement **multiple cache layers** for optimal performance:
+
+```
+┌─────────────────────────────────────────────┐
+│ Layer 1: In-Memory Cache (< 1ms)           │
+│ ├─ LRU Cache                                │
+│ └─ TTL: 30 seconds                          │
+└──────────────┬──────────────────────────────┘
+               │ (cache miss)
+               ▼
+┌─────────────────────────────────────────────┐
+│ Layer 2: Redis Cache (1-5ms)               │
+│ ├─ Shared across servers                   │
+│ └─ TTL: 30 seconds                          │
+└──────────────┬──────────────────────────────┘
+               │ (cache miss)
+               ▼
+┌─────────────────────────────────────────────┐
+│ Layer 3: Kixago API (1-5s)                 │
+│ └─ Fresh on-chain data                      │
+└─────────────────────────────────────────────┘
+```
+
+**Implementation:**
+
+```typescript
+class MultiLayerCache {
+  private memCache = new Map();
+  
+  constructor(private redis: Redis) {}
+  
+  async get(key: string): Promise<any> {
+    // Layer 1: Memory
+    if (this.memCache.has(key)) {
+      const { data, expires } = this.memCache.get(key);
+      if (Date.now() < expires) {
+        console.log('✅ Memory cache HIT');
+        return data;
+      }
+      this.memCache.delete(key);
+    }
+    
+    // Layer 2: Redis
+    const cached = await this.redis.get(key);
+    if (cached) {
+      console.log('✅ Redis cache HIT');
+      const data = JSON.parse(cached);
+      
+      // Populate memory cache
+      this.memCache.set(key, {
+        data,
+        expires: Date.now() + 30000
+      });
+      
+      return data;
+    }
+    
+    return null;
+  }
+  
+  async set(key: string, data: any): Promise<void> {
+    // Set in both layers
+    this.memCache.set(key, {
+      data,
+      expires: Date.now() + 30000
+    });
+    
+    await this.redis.setex(key, 30, JSON.stringify(data));
+  }
+}
+```
+
+---
+
+### Cache Warming
+
+Pre-populate cache for known wallets:
+
+```typescript
+// Warm cache on server startup
+async function warmCache(wallets: string[]) {
+  console.log(`Warming cache for ${wallets.length} wallets...`);
+  
+  for (const wallet of wallets) {
+    try {
+      await getCachedProfile(wallet); // Will cache the result
+    } catch (err) {
+      console.warn(`Failed to warm cache for ${wallet}`);
+    }
+  }
+  
+  console.log('✅ Cache warming complete');
+}
+
+// Run on startup
+warmCache([
+  '0xf0bb20865277aBd641a307eCe5Ee04E79073416C',
+  '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  // ... frequently accessed wallets
+]);
+```
+
+---
+
+### Cache Invalidation
+
+Invalidate cache when you know data has changed:
+
+```typescript
+async function invalidateCache(walletAddress: string) {
+  const cacheKey = `kixago:profile:${walletAddress}`;
+  
+  // Clear from Redis
+  await redis.del(cacheKey);
+  
+  // Clear from memory
+  memCache.delete(cacheKey);
+  
+  console.log(`✅ Cache invalidated for ${walletAddress}`);
+}
+
+// Example: User repays debt
+async function handleDebtRepayment(walletAddress: string) {
+  // Process repayment...
+  
+  // Invalidate cache to get fresh data
+  await invalidateCache(walletAddress);
+}
+```
+
+---
+
+## Rate Limiting Management
+
+### Monitor Your Usage
+
+Track API usage to avoid hitting limits:
+
+```typescript
+// Track requests in sliding window
+class UsageTracker {
+  private requests: { timestamp: number; endpoint: string }[] = [];
+  
+  track(endpoint: string) {
+    this.requests.push({
+      timestamp: Date.now(),
+      endpoint
+    });
+    
+    // Keep last 1 hour
+    const oneHourAgo = Date.now() - 3600000;
+    this.requests = this.requests.filter(r => r.timestamp > oneHourAgo);
+  }
+  
+  getUsage() {
+    const now = Date.now();
+    
+    return {
+      lastHour: this.requests.length,
+      lastMinute: this.requests.filter(r => r.timestamp > now - 60000).length,
+      lastSecond: this.requests.filter(r => r.timestamp > now - 1000).length,
+    };
+  }
+  
+  isNearLimit(plan: 'developer' | 'startup' | 'institution') {
+    const limits = {
+      developer: { perSecond: 10, perMonth: 10000 },
+      startup: { perSecond: 50, perMonth: 100000 },
+      institution: { perSecond: 200, perMonth: 1000000 }
+    };
+    
+    const limit = limits[plan];
+    const usage = this.getUsage();
+    
+    return usage.lastSecond > limit.perSecond * 0.8; // 80% threshold
+  }
+}
+
+const tracker = new UsageTracker();
+
+async function monitoredFetch(address: string) {
+  tracker.track('risk-profile');
+  
+  if (tracker.isNearLimit('developer')) {
+    console.warn('⚠️ Approaching rate limit!');
+  }
+  
+  return getRiskProfile(address);
+}
+```
+
+---
+
+### Graceful Degradation
+
+Handle rate limits gracefully:
+
+```typescript
+async function fetchWithFallback(address: string) {
+  try {
+    return await getRiskProfile(address);
+  } catch (err) {
+    if (err.statusCode === 429) {
+      // Rate limited - use stale cache if available
+      const staleCache = await getStaleCache(address);
+      if (staleCache) {
+        console.warn('⚠️ Rate limited - using stale cache');
+        return {
+          ...staleCache,
+          _stale: true,
+          _message: 'Data may be outdated due to rate limiting'
+        };
+      }
+    }
+    
+    throw err;
+  }
+}
+
+async function getStaleCache(address: string) {
+  // Try to get cache even if expired
+  const key = `kixago:profile:${address}`;
+  const cached = await redis.get(key);
+  return cached ? JSON.parse(cached) : null;
+}
+```
+
+---
+
+### Request Queuing
+
+Queue requests to smooth out bursts:
+
+```typescript
+class RequestQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private processing = false;
+  private requestsPerSecond: number;
+  
+  constructor(requestsPerSecond: number) {
+    this.requestsPerSecond = requestsPerSecond;
+  }
+  
+  async add<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      
+      if (!this.processing) {
+        this.process();
+      }
+    });
+  }
+  
+  private async process() {
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const fn = this.queue.shift()!;
+      await fn();
+      
+      // Delay to respect rate limit
+      await new Promise(resolve => 
+        setTimeout(resolve, 1000 / this.requestsPerSecond)
+      );
+    }
+    
+    this.processing = false;
+  }
+}
+
+// Usage
+const queue = new RequestQueue(10); // 10 req/sec
+
+async function queuedFetch(address: string) {
+  return queue.add(() => getRiskProfile(address));
+}
+```
+
+---
+
+## Code Organization
+
+### Centralized Client
+
+Create a single client instance:
+
+```typescript
+// lib/kixago.ts
+export class KixagoClient {
+  private static instance: KixagoClient;
+  
+  private constructor(
+    private apiKey: string,
+    private cache: Cache
+  ) {}
+  
+  static getInstance(): KixagoClient {
+    if (!KixagoClient.instance) {
+      KixagoClient.instance = new KixagoClient(
+        process.env.KIXAGO_API_KEY!,
+        new RedisCache()
+      );
+    }
+    return KixagoClient.instance;
+  }
+  
+  async getRiskProfile(address: string) {
+    // Implementation...
+  }
+}
+
+// Usage everywhere
+import { KixagoClient } from '@/lib/kixago';
+
+const client = KixagoClient.getInstance();
+const profile = await client.getRiskProfile(address);
+```
+
+---
+
+### Separation of Concerns
+
+Organize by feature:
+
+```
+src/
+├── services/
+│   ├── kixago/
+│   │   ├── client.ts          # API client
+│   │   ├── cache.ts           # Caching logic
+│   │   ├── types.ts           # TypeScript types
+│   │   └── utils.ts           # Helper functions
+│   │
+│   ├── underwriting/
+│   │   ├── service.ts         # Underwriting logic
+│   │   └── rules.ts           # Business rules
+│   │
+│   └── monitoring/
+│       ├── alerts.ts          # Alerting logic
+│       └── tracker.ts         # Usage tracking
+│
+├── controllers/
+│   └── wallet.controller.ts   # API endpoints
+│
+└── config/
+    └── kixago.config.ts       # Configuration
+```
+
+---
+
+### Configuration Management
+
+Centralize configuration:
+
+```typescript
+// config/kixago.config.ts
+export const kixagoConfig = {
+  apiKey: process.env.KIXAGO_API_KEY!,
+  baseUrl: process.env.KIXAGO_BASE_URL || 'https://api.kixago.com',
+  
+  cache: {
+    ttl: parseInt(process.env.KIXAGO_CACHE_TTL || '30'),
+    redis: {
+      url: process.env.REDIS_URL
+    }
+  },
+  
+  rateLimit: {
+    requestsPerSecond: parseInt(process.env.KIXAGO_RATE_LIMIT || '10')
+  },
+  
+  retry: {
+    maxRetries: 3,
+    initialDelay: 1000,
+    maxDelay: 30000
+  },
+  
+  timeout: 30000,
+  
+  monitoring: {
+    enabled: process.env.NODE_ENV === 'production',
+    sentry: process.env.SENTRY_DSN
+  }
+};
+
+// Validate configuration on startup
+export function validateConfig() {
+  if (!kixagoConfig.apiKey) {
+    throw new Error('KIXAGO_API_KEY is required');
+  }
+  
+  if (!kixagoConfig.apiKey.startsWith('kixakey_')) {
+    throw new Error('Invalid KIXAGO_API_KEY format');
+  }
+}
+```
+
+---
+
+## Testing Strategies
+
+### Mock API Responses
+
+Create reusable mocks for testing:
+
+```typescript
+// tests/mocks/kixago.mock.ts
+export const mockRiskProfile = {
+  wallet_address: '0xTest...',
+  total_collateral_usd: 100000,
+  total_borrowed_usd: 30000,
+  global_health_factor: 3.2,
+  global_ltv: 30.0,
+  positions_at_risk_count: 0,
+  defi_score: {
+    defi_score: 750,
+    risk_level: 'Very Low Risk',
+    risk_category: 'VERY_LOW_RISK',
+    // ... rest of fields
+  }
+};
+
+export function mockKixagoClient() {
+  return {
+    getRiskProfile: jest.fn().mockResolvedValue(mockRiskProfile)
+  };
+}
+
+// Usage in tests
+import { mockKixagoClient } from './mocks/kixago.mock';
+
+test('underwriting approves high score', async () => {
+  const client = mockKixagoClient();
+  const service = new UnderwritingService(client);
+  
+  const decision = await service.underwrite('0xTest...', 10000);
+  
+  expect(decision.decision).toBe('APPROVED');
+});
+```
+
+---
+
+### Integration Tests
+
+Test actual API integration (use sparingly):
+
+```typescript
+// tests/integration/kixago.test.ts
+describe('Kixago API Integration', () => {
+  // Only run if API key is present
+  const apiKey = process.env.KIXAGO_TEST_API_KEY;
+  const shouldRun = apiKey ? test : test.skip;
+  
+  shouldRun('fetches real profile', async () => {
+    const client = new KixagoClient(apiKey);
+    
+    const profile = await client.getRiskProfile(
+      '0xf0bb20865277aBd641a307eCe5Ee04E79073416C'
+    );
+    
+    expect(profile.wallet_address).toBe('0xf0bb20865277aBd641a307eCe5Ee04E79073416C');
+    expect(profile.defi_score).toBeDefined();
+  }, 30000); // 30s timeout
+});
+```
+
+---
+
+### Contract Testing
+
+Ensure your code handles API contract changes:
+
+```typescript
+// tests/contract/kixago.contract.test.ts
+import Ajv from 'ajv';
+import { riskProfileSchema } from './schemas/risk-profile.schema.json';
+
+const ajv = new Ajv();
+
+test('API response matches expected schema', async () => {
+  const profile = await getRiskProfile('0xTest...');
+  
+  const validate = ajv.compile(riskProfileSchema);
+  const valid = validate(profile);
+  
+  if (!valid) {
+    console.error('Schema validation errors:', validate.errors);
+  }
+  
+  expect(valid).toBe(true);
+});
+```
+
+---
+
+## Monitoring & Observability
+
+### Metrics to Track
+
+```typescript
+// Track key metrics
+class KixagoMetrics {
+  track(metric: string, value: number, tags: Record<string, string> = {}) {
+    // Send to monitoring service (Datadog, Prometheus, etc.)
+    metrics.gauge(`kixago.${metric}`, value, tags);
+  }
+  
+  increment(metric: string, tags: Record<string, string> = {}) {
+    metrics.increment(`kixago.${metric}`, tags);
+  }
+  
+  timing(metric: string, duration: number, tags: Record<string, string> = {}) {
+    metrics.timing(`kixago.${metric}`, duration, tags);
+  }
+}
+
+const kixagoMetrics = new KixagoMetrics();
+
+// Track API calls
+async function monitoredGetRiskProfile(address: string) {
+  const startTime = Date.now();
+  
+  try {
+    const profile = await getRiskProfile(address);
+    
+    kixagoMetrics.timing('response_time', Date.now() - startTime, {
+      cached: profile._cached ? 'true' : 'false'
+    });
+    
+    kixagoMetrics.increment('success', {
+      has_score: profile.defi_score ? 'true' : 'false'
+    });
+    
+    if (profile.aggregation_errors) {
+      kixagoMetrics.increment('partial_failure', {
+        protocols: Object.keys(profile.aggregation_errors).join(',')
+      });
+    }
+    
+    return profile;
+    
+  } catch (err) {
+    kixagoMetrics.increment('error', {
+      type: err.name,
+      statusCode: err.statusCode?.toString() || 'unknown'
+    });
+    
+    throw err;
+  }
+}
+```
+
+---
+
+### Logging Best Practices
+
+```typescript
+// Structured logging
+import logger from './logger';
+
+async function getRiskProfileWithLogging(address: string) {
+  const requestId = generateRequestId();
+  
+  logger.info('Fetching risk profile', {
+    requestId,
+    address,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const profile = await getRiskProfile(address);
+    
+    logger.info('Risk profile fetched successfully', {
+      requestId,
+      address,
+      score: profile.defi_score?.defi_score,
+      cached: profile._cached,
+      duration: '1.2s'
+    });
+    
+    return profile;
+    
+  } catch (err) {
+    logger.error('Failed to fetch risk profile', {
+      requestId,
+      address,
+      error: err.message,
+      statusCode: err.statusCode,
+      stack: err.stack
+    });
+    
+    throw err;
+  }
+}
+```
+
+---
+
+### Health Checks
+
+Implement health checks for monitoring:
+
+```typescript
+// Health check endpoint
+app.get('/health/kixago', async (req, res) => {
+  try {
+    // Test API connectivity with a known wallet
+    const testAddress = '0xf0bb20865277aBd641a307eCe5Ee04E79073416C';
+    
+    const startTime = Date.now();
+    const profile = await getRiskProfile(testAddress);
+    const duration = Date.now() - startTime;
+    
+    res.json({
+      status: 'healthy',
+      api: 'kixago',
+      response_time_ms: duration,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (err) {
+    res.status(503).json({
+      status: 'unhealthy',
+      api: 'kixago',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+```
+
+---
+
+## Production Deployment Checklist
+
+### Pre-Launch Checklist
+
+- [ ] **API Key Management**
+  - [ ] Production API key created
+  - [ ] Stored in secure secret manager (not .env file)
+  - [ ] Different keys for staging/production
+  - [ ] Key rotation plan in place
+
+- [ ] **Caching**
+  - [ ] Redis configured and tested
+  - [ ] Cache TTL set to 30+ seconds
+  - [ ] Cache warming for known wallets
+  - [ ] Cache invalidation strategy
+
+- [ ] **Error Handling**
+  - [ ] Retry logic implemented
+  - [ ] Exponential backoff configured
+  - [ ] Partial failure handling tested
+  - [ ] Error logging to monitoring service
+
+- [ ] **Rate Limiting**
+  - [ ] Usage tracking implemented
+  - [ ] Rate limit monitoring
+  - [ ] Graceful degradation plan
+  - [ ] Upgrade plan if needed
+
+- [ ] **Monitoring**
+  - [ ] Metrics tracking configured
+  - [ ] Alerts set up (error rate, latency, etc.)
+  - [ ] Dashboards created
+  - [ ] On-call rotation defined
+
+- [ ] **Testing**
+  - [ ] Unit tests passing
+  - [ ] Integration tests passing
+  - [ ] Load testing completed
+  - [ ] Edge cases tested
+
+- [ ] **Documentation**
+  - [ ] Internal docs written
+  - [ ] Runbook created
+  - [ ] Team trained
+
+---
+
+### Environment Variables Template
+
+```bash
+# .env.production
+NODE_ENV=production
+
+# Kixago API
+KIXAGO_API_KEY=kixakey_prod_...
+KIXAGO_BASE_URL=https://api.kixago.com
+KIXAGO_CACHE_TTL=30
+KIXAGO_RATE_LIMIT=10
+
+# Redis Cache
+REDIS_URL=redis://prod-redis:6379
+REDIS_PASSWORD=...
+
+# Monitoring
+SENTRY_DSN=https://...
+DATADOG_API_KEY=...
+
+# Application
+PORT=3000
+LOG_LEVEL=info
+```
+
+---
+
+### Scaling Considerations
+
+**Horizontal Scaling:**
+
+```typescript
+// Use Redis for shared cache across instances
+// Multiple app servers can share the same cache
+
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│ App #1  │────▶│  Redis  │◀────│ App #2  │
+└─────────┘     └─────────┘     └─────────┘
+     │                                │
+     └────────────┬───────────────────┘
+                  ▼
+          ┌───────────────┐
+          │  Kixago API   │
+          └───────────────┘
+```
+
+**Load Balancing:**
+
+```nginx
+# nginx.conf
+upstream app_servers {
+    least_conn; # Route to least busy server
+    
+    server app1:3000;
+    server app2:3000;
+    server app3:3000;
+}
+
+server {
+    listen 80;
+    
+    location / {
+        proxy_pass http://app_servers;
+        proxy_set_header X-Request-ID $request_id;
+    }
+}
+```
+
+---
+
+## Performance Benchmarks
+
+### Target Metrics
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **Cache Hit Rate** | > 80% | Most requests should be cached |
+| **P50 Response Time** | < 100ms | Median response (cached) |
+| **P95 Response Time** | < 2s | 95th percentile (fresh) |
+| **P99 Response Time** | < 5s | 99th percentile |
+| **Error Rate** | < 1% | Including partial failures |
+| **Uptime** | > 99.9% | Your service uptime |
+
+---
+
+## Common Pitfalls to Avoid
+
+### ❌ Don't Do This
+
+```typescript
+// ❌ No caching
+async function getScore(address: string) {
+  return (await getRiskProfile(address)).defi_score.defi_score;
+}
+
+// ❌ Hardcoded API key
+const client = new KixagoClient('kixakey_abc123');
+
+// ❌ No error handling
+const profile = await fetch(url).then(r => r.json());
+
+// ❌ No timeout
+const profile = await fetch(url);
+
+// ❌ Exposing API key in frontend
+const profile = await fetch(apiUrl, {
+  headers: { 'X-API-Key': window.KIXAGO_KEY }
+});
+
+// ❌ Sequential requests
+for (const wallet of wallets) {
+  await getRiskProfile(wallet);
+}
+
+// ❌ Ignoring aggregation errors
+const profile = await getRiskProfile(address);
+// No check for partial failures
+
+// ❌ No validation
+const profile = await getRiskProfile(userInput); // Potential injection
+```
+
+---
+
+### ✅ Do This Instead
+
+```typescript
+// ✅ With caching
+const cachedClient = new CachedKixagoClient(apiKey);
+const profile = await cachedClient.getRiskProfile(address);
+
+// ✅ Environment variables
+const client = new KixagoClient(process.env.KIXAGO_API_KEY);
+
+// ✅ Error handling
+try {
+  const profile = await getRiskProfile(address);
+} catch (err) {
+  handleError(err);
+}
+
+// ✅ With timeout
+const profile = await fetch(url, {
+  signal: AbortSignal.timeout(30000)
+});
+
+// ✅ Server-side proxy
+// Backend only - API key never exposed
+
+// ✅ Concurrent requests
+const profiles = await Promise.all(
+  wallets.map(w => getRiskProfile(w))
+);
+
+// ✅ Check aggregation errors
+if (profile.aggregation_errors) {
+  logger.warn('Partial failure', profile.aggregation_errors);
+}
+
+// ✅ Validate inputs
+if (!isValidAddress(address)) throw new Error('Invalid address');
+const profile = await getRiskProfile(address);
+```
+
+---
+
+## Quick Reference
+
+### Essential Code Snippets
+
+**Complete production-ready client:**
+
+```typescript
+import { createClient } from './lib/kixago-client';
+
+const client = createClient({
+  apiKey: process.env.KIXAGO_API_KEY!,
+  cache: {
+    enabled: true,
+    ttl: 30,
+    redis: process.env.REDIS_URL
+  },
+  retry: {
+    maxRetries: 3,
+    backoff: 'exponential'
+  },
+  timeout: 30000,
+  monitoring: {
+    enabled: true,
+    metrics: true,
+    logging: true
+  }
+});
+
+// Use everywhere
+const profile = await client.getRiskProfile(address);
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/guides/error-handling" className="button button--primary button--lg">
+    🔧 Error Handling Guide
+  </a>
+  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+    💻 Code Examples
+  </a>
+  <a href="/api/authentication" className="button button--secondary button--lg">
+    🔐 Authentication
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Architecture questions?** Email api@kixago.com
+- **Performance issues?** Share your metrics with support
+- **Custom requirements?** [Contact enterprise sales](https://kixago.com/enterprise)
+```
+
+---

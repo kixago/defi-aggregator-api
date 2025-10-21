@@ -1,0 +1,816 @@
+---
+sidebar_position: 1
+title: "Response Structure Overview"
+description: "Complete guide to understanding API responses"
+---
+
+# Response Structure Overview
+
+A complete guide to understanding and using the `/v1/risk-profile` API response.
+
+---
+
+## Response Overview
+
+Every successful API call returns a **comprehensive JSON object** with seven main sections:
+
+```typescript
+{
+  // 1. Portfolio Summary (top-level fields)
+  wallet_address: string;
+  total_collateral_usd: number;
+  total_borrowed_usd: number;
+  global_health_factor: number;
+  global_ltv: number;
+  positions_at_risk_count: number;
+  last_updated: string;
+  aggregation_duration: string;
+  
+  // 2. DeFi Credit Score (300-850)
+  defi_score: DeFiScore | null;
+  
+  // 3. Individual Lending Positions
+  lending_positions: LendingPosition[];
+  
+  // 4. Protocol Errors (optional)
+  aggregation_errors?: Record<string, string>;
+}
+```
+
+**Response size:** Typically 20-50 KB (varies by position count)
+
+---
+
+## Section 1: Portfolio Summary
+
+The **top-level fields** provide a quick snapshot of the entire portfolio.
+
+### Example
+
+```json
+{
+  "wallet_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "total_collateral_usd": 2139957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  "positions_at_risk_count": 2,
+  "last_updated": "2025-10-21T04:19:25.986916933Z",
+  "aggregation_duration": "4.682898286s"
+}
+```
+
+### Field Reference
+
+| Field | Type | Description | Example Value |
+|-------|------|-------------|---------------|
+| `wallet_address` | string | Ethereum address (checksummed) | `"0xf0bb..."` |
+| `total_collateral_usd` | number | Sum of all collateral across all protocols/chains | `2139957718.47` |
+| `total_borrowed_usd` | number | Sum of all debt across all protocols/chains | `1905081695.88` |
+| `global_health_factor` | number | Portfolio-wide liquidation risk (< 1.0 = liquidated) | `1.067` |
+| `global_ltv` | number | Loan-to-value ratio (%) across entire portfolio | `89.02` |
+| `positions_at_risk_count` | number | Count of positions with `health_factor < 1.2` | `2` |
+| `last_updated` | string | ISO 8601 timestamp when data was last fetched | `"2025-10-21T04:19:25Z"` |
+| `aggregation_duration` | string | Time taken to fetch all data | `"4.682s"` |
+
+---
+
+### Understanding Health Factor
+
+**Health factor** is the most critical metric in DeFi lending:
+
+```
+health_factor = (collateral × liquidation_threshold) / debt
+```
+
+**Interpretation:**
+
+| Health Factor | Status | Risk Level | Action |
+|---------------|--------|------------|--------|
+| **> 2.0** | 🟢 Very Safe | Very Low Risk | No action needed |
+| **1.5 - 2.0** | 🔵 Safe | Low Risk | Monitor occasionally |
+| **1.3 - 1.5** | 🟡 Moderate | Medium Risk | Watch closely |
+| **1.1 - 1.3** | 🟠 Risky | High Risk | Reduce leverage soon |
+| **1.0 - 1.1** | 🔴 Danger Zone | Very High Risk | **Take action NOW** |
+| **< 1.0** | ⚫ Liquidated | Liquidated | Position is being liquidated |
+
+**Example calculation:**
+
+If `health_factor = 1.067`, the position can be liquidated if collateral value drops:
+
+```
+(1.067 - 1.0) / 1.067 = 6.28% price drop = liquidation
+```
+
+This wallet is **6.3% away from liquidation** - extremely risky!
+
+---
+
+### Understanding LTV (Loan-to-Value)
+
+**LTV** measures how much debt you have relative to collateral:
+
+```
+ltv = (total_borrowed / total_collateral) × 100
+```
+
+**Interpretation:**
+
+| LTV Range | Risk Level | Typical Use Case |
+|-----------|------------|------------------|
+| **0-30%** | Very Low | Conservative long-term holding |
+| **31-50%** | Low | Normal borrowing |
+| **51-70%** | Medium | Moderate leverage |
+| **71-85%** | High | Aggressive leverage |
+| **86-95%** | Very High | Extreme leverage (risky) |
+| **> 95%** | Critical | Danger zone |
+
+**Example:**
+
+```json
+{
+  "total_collateral_usd": 2139957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_ltv": 89.02
+}
+```
+
+```
+LTV = (1,905,081,695.88 / 2,139,957,718.47) × 100 = 89.02%
+```
+
+This is **extremely high leverage** - very vulnerable to price swings.
+
+---
+
+### Positions at Risk Count
+
+Counts how many individual positions have `health_factor < 1.2`:
+
+```json
+{
+  "positions_at_risk_count": 2,
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "chain": "Ethereum",
+      "health_factor": 1.065,
+      "is_at_risk": true  // ← health_factor < 1.2
+    },
+    {
+      "protocol": "Aave",
+      "chain": "Base",
+      "health_factor": 1.160,
+      "is_at_risk": true  // ← health_factor < 1.2
+    }
+  ]
+}
+```
+
+**Use this to:**
+- Quickly identify if any positions need attention
+- Filter positions to show only at-risk ones
+- Trigger alerts when count > 0
+
+---
+
+### Data Freshness
+
+The `last_updated` timestamp shows when the data was fetched:
+
+```json
+{
+  "last_updated": "2025-10-21T04:19:25.986916933Z"
+}
+```
+
+**Important notes:**
+
+- ✅ Data is **real-time on-chain** (not indexed/delayed)
+- ✅ Cached for **30 seconds** after first fetch
+- ✅ Each position has its own `last_updated` timestamp
+- ✅ Check `X-Cache-Status` header to see if response was cached
+
+**Example:**
+
+```javascript
+const profile = await getRiskProfile(address);
+const dataAge = Date.now() - new Date(profile.last_updated).getTime();
+
+if (dataAge > 60000) { // More than 1 minute old
+  console.log('Data may be stale, consider refetching');
+}
+```
+
+---
+
+### Aggregation Performance
+
+The `aggregation_duration` shows how long it took to fetch all data:
+
+```json
+{
+  "aggregation_duration": "4.682898286s"
+}
+```
+
+**Typical durations:**
+
+- **0.5-2 seconds:** Single chain (e.g., Ethereum only)
+- **2-5 seconds:** Multi-chain with many positions
+- **<100ms:** Cached response (subsequent requests within 30s)
+
+**What affects duration:**
+
+- Number of chains queried
+- Number of protocols with positions
+- RPC node response time
+- Network conditions
+
+---
+
+## Section 2: DeFi Score Object
+
+The `defi_score` object contains the complete credit analysis:
+
+```json
+{
+  "defi_score": {
+    "defi_score": 474,
+    "risk_level": "High Risk",
+    "risk_category": "HIGH_RISK",
+    "color": "orange",
+    "score_breakdown": { /* ... */ },
+    "risk_factors": [ /* ... */ ],
+    "recommendations": { /* ... */ },
+    "liquidation_simulation": { /* ... */ },
+    "calculated_at": "2025-10-21T04:19:25.987006056Z"
+  }
+}
+```
+
+**This section is so important, it has its own detailed guide:**
+
+👉 [Complete DeFi Score Explanation →](/api/understanding-responses/defi-score)
+
+### Quick Reference
+
+**Top-Level Score Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `defi_score` | number | Final credit score (300-850) |
+| `risk_level` | string | Human-readable risk level |
+| `risk_category` | enum | Programmatic risk category |
+| `color` | string | Suggested UI color |
+| `calculated_at` | string | When score was calculated |
+
+**Score Categories:**
+
+| Score Range | risk_category | risk_level | color |
+|-------------|---------------|------------|-------|
+| 750-850 | `VERY_LOW_RISK` | Very Low Risk | green |
+| 650-749 | `LOW_RISK` | Low Risk | blue |
+| 550-649 | `MODERATE_RISK` | Medium Risk | yellow |
+| 450-549 | `HIGH_RISK` | High Risk | orange |
+| 300-449 | `URGENT_ACTION_REQUIRED` | Very High Risk | red |
+
+**Usage example:**
+
+```typescript
+const { defi_score, risk_category } = profile.defi_score;
+
+// Quick decision logic
+switch (risk_category) {
+  case 'VERY_LOW_RISK':
+  case 'LOW_RISK':
+    return 'APPROVED';
+  
+  case 'MODERATE_RISK':
+    return 'MANUAL_REVIEW';
+  
+  case 'HIGH_RISK':
+  case 'URGENT_ACTION_REQUIRED':
+    return 'DECLINED';
+}
+```
+
+### Null Score
+
+If the wallet has no DeFi positions, `defi_score` will be `null`:
+
+```json
+{
+  "wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "total_collateral_usd": 0,
+  "total_borrowed_usd": 0,
+  "lending_positions": [],
+  "defi_score": null  // ← No positions = no score
+}
+```
+
+**Handle this in your code:**
+
+```typescript
+const profile = await getRiskProfile(address);
+
+if (!profile.defi_score) {
+  return {
+    message: 'No DeFi lending positions found',
+    score: null
+  };
+}
+
+// Safe to access score now
+const score = profile.defi_score.defi_score;
+```
+
+---
+
+## Section 3: Lending Positions
+
+The `lending_positions` array contains individual positions across all protocols and chains.
+
+### Example
+
+```json
+{
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "user_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+      "collateral_usd": 2077178086.09,
+      "borrowed_usd": 1853661183.91,
+      "health_factor": 1.065,
+      "ltv_current": 89.24,
+      "is_at_risk": true,
+      "collateral_details": [
+        {
+          "token": "weETH",
+          "amount": 496800.01,
+          "usd_value": 2077178086.09,
+          "token_address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+        }
+      ],
+      "borrowed_details": [
+        {
+          "token": "WETH",
+          "amount": 478632.98,
+          "usd_value": 1853661183.91,
+          "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        }
+      ],
+      "last_updated": "2025-10-21T04:19:25.986860777Z"
+    },
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Base",
+      "collateral_usd": 62779632.38,
+      "borrowed_usd": 51420511.97,
+      "health_factor": 1.160,
+      "ltv_current": 81.91,
+      "is_at_risk": true,
+      "collateral_details": [ /* ... */ ],
+      "borrowed_details": [ /* ... */ ],
+      "last_updated": "2025-10-21T04:19:24.172942614Z"
+    }
+  ]
+}
+```
+
+### Position Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `protocol` | string | Protocol name (Aave, Compound, MakerDAO) |
+| `protocol_version` | string | Version (V3, V2, 1) |
+| `chain` | string | Blockchain (Ethereum, Base, Arbitrum, Polygon) |
+| `user_address` | string | Wallet address |
+| `collateral_usd` | number | Total collateral for this position |
+| `borrowed_usd` | number | Total debt for this position |
+| `health_factor` | number | Position-specific health factor |
+| `ltv_current` | number | Position-specific LTV (%) |
+| `is_at_risk` | boolean | `true` if `health_factor < 1.2` |
+| `collateral_details` | array | Array of collateral tokens |
+| `borrowed_details` | array | Array of borrowed tokens |
+| `last_updated` | string | When this position was fetched |
+
+---
+
+### Working with Positions
+
+#### Filter by Chain
+
+```typescript
+const ethereumPositions = profile.lending_positions.filter(
+  pos => pos.chain === 'Ethereum'
+);
+
+console.log(`Found ${ethereumPositions.length} Ethereum positions`);
+```
+
+#### Filter by Protocol
+
+```typescript
+const aavePositions = profile.lending_positions.filter(
+  pos => pos.protocol === 'Aave'
+);
+```
+
+#### Find At-Risk Positions
+
+```typescript
+const atRiskPositions = profile.lending_positions.filter(
+  pos => pos.is_at_risk
+);
+
+if (atRiskPositions.length > 0) {
+  console.log('⚠️ WARNING: Positions at risk of liquidation:');
+  atRiskPositions.forEach(pos => {
+    console.log(`  - ${pos.protocol} on ${pos.chain}: HF ${pos.health_factor.toFixed(3)}`);
+  });
+}
+```
+
+#### Sum by Protocol
+
+```typescript
+const protocolTotals = profile.lending_positions.reduce((acc, pos) => {
+  const key = pos.protocol;
+  if (!acc[key]) {
+    acc[key] = { collateral: 0, debt: 0 };
+  }
+  acc[key].collateral += pos.collateral_usd;
+  acc[key].debt += pos.borrowed_usd;
+  return acc;
+}, {});
+
+console.log(protocolTotals);
+// {
+//   "Aave": { collateral: 2139957718.47, debt: 1905081695.88 }
+// }
+```
+
+---
+
+### Token Details
+
+Each position includes **token-level breakdown** in `collateral_details` and `borrowed_details`:
+
+```typescript
+{
+  token: string;         // Symbol (e.g., "WETH", "USDC")
+  amount: number;        // Token amount in native decimals
+  usd_value: number;     // Current USD value
+  token_address: string; // Contract address
+}
+```
+
+**Example:**
+
+```json
+{
+  "collateral_details": [
+    {
+      "token": "weETH",
+      "amount": 496800.01,
+      "usd_value": 2077178086.09,
+      "token_address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+    }
+  ]
+}
+```
+
+**Usage:**
+
+```typescript
+// Get all unique collateral tokens
+const collateralTokens = new Set();
+profile.lending_positions.forEach(pos => {
+  pos.collateral_details?.forEach(detail => {
+    collateralTokens.add(detail.token);
+  });
+});
+
+console.log('Collateral tokens:', Array.from(collateralTokens));
+// ["weETH", "WETH", "USDC"]
+```
+
+```typescript
+// Calculate total exposure to a specific token
+function getTokenExposure(profile, tokenSymbol) {
+  let totalCollateral = 0;
+  let totalDebt = 0;
+  
+  profile.lending_positions.forEach(pos => {
+    pos.collateral_details?.forEach(detail => {
+      if (detail.token === tokenSymbol) {
+        totalCollateral += detail.usd_value;
+      }
+    });
+    
+    pos.borrowed_details?.forEach(detail => {
+      if (detail.token === tokenSymbol) {
+        totalDebt += detail.usd_value;
+      }
+    });
+  });
+  
+  return { collateral: totalCollateral, debt: totalDebt };
+}
+
+const wethExposure = getTokenExposure(profile, 'WETH');
+console.log(`WETH - Collateral: $${wethExposure.collateral}, Debt: $${wethExposure.debt}`);
+```
+
+---
+
+### Null Token Details
+
+Sometimes `collateral_details` or `borrowed_details` may be `null`:
+
+```json
+{
+  "protocol": "Aave",
+  "chain": "Ethereum",
+  "collateral_usd": 2077178086.09,
+  "collateral_details": null,  // ← Can happen
+  "borrowed_details": [ /* ... */ ]
+}
+```
+
+**Why this happens:**
+
+- RPC call to fetch token details failed
+- Protocol-specific issue (rare)
+- Token metadata unavailable
+
+**You still get the USD totals** (`collateral_usd`, `borrowed_usd`), just not the token-level breakdown.
+
+**Handle in code:**
+
+```typescript
+position.collateral_details?.forEach(detail => {
+  // Safe - only runs if collateral_details is not null
+  console.log(detail.token);
+});
+```
+
+---
+
+## Section 4: Aggregation Errors
+
+The optional `aggregation_errors` object contains non-fatal errors from individual protocols:
+
+```json
+{
+  "aggregation_errors": {
+    "CompoundV3:Ethereum": "could not get numAssets from Compound V3 market"
+  }
+}
+```
+
+**Key format:** `"Protocol:Chain"` → `"Error message"`
+
+### Why Errors are Non-Fatal
+
+**Philosophy:** One protocol failing should not break the entire request.
+
+**Example scenario:**
+
+- ✅ Aave V3 on Ethereum: Success
+- ✅ Aave V3 on Base: Success
+- ❌ Compound V3 on Ethereum: Failed (RPC rate limit)
+
+**Result:** You still get Aave data, plus an error entry for Compound.
+
+```json
+{
+  "lending_positions": [
+    { "protocol": "Aave", "chain": "Ethereum", /* ... */ },
+    { "protocol": "Aave", "chain": "Base", /* ... */ }
+  ],
+  "aggregation_errors": {
+    "CompoundV3:Ethereum": "max retries exceeded: 429 Too Many Requests"
+  }
+}
+```
+
+---
+
+### Common Error Messages
+
+| Error Message | Cause | Solution |
+|---------------|-------|----------|
+| `"could not get numAssets from Compound V3 market"` | Compound V3 contract issue | Wait and retry (usually temporary) |
+| `"max retries exceeded: 429 Too Many Requests"` | RPC rate limit (Alchemy) | Use own RPC node or upgrade Alchemy tier |
+| `"call to decimals for TOKEN returned empty response"` | Token contract issue | Non-critical - we fall back to external pricing API |
+| `"Aave: could not get asset price"` | Chainlink oracle issue | Non-critical - price fetched from CoinDesk API |
+
+---
+
+### Handling Errors in Code
+
+```typescript
+const profile = await getRiskProfile(address);
+
+// Check for partial failures
+if (profile.aggregation_errors && Object.keys(profile.aggregation_errors).length > 0) {
+  console.warn('⚠️ Some protocols failed:');
+  
+  Object.entries(profile.aggregation_errors).forEach(([protocolKey, error]) => {
+    console.warn(`  - ${protocolKey}: ${error}`);
+  });
+  
+  // Still use the data you have
+  console.log(`✅ Successfully fetched ${profile.lending_positions.length} positions`);
+} else {
+  console.log('✅ Complete data - all protocols successful');
+}
+```
+
+---
+
+## Response Navigation Patterns
+
+### Pattern 1: Quick Risk Assessment
+
+Get the most important metrics in one line:
+
+```typescript
+const { global_health_factor, global_ltv, defi_score } = profile;
+const score = defi_score?.defi_score ?? null;
+
+console.log(`Score: ${score}, HF: ${global_health_factor.toFixed(2)}, LTV: ${global_ltv.toFixed(1)}%`);
+// Output: Score: 474, HF: 1.07, LTV: 89.0%
+```
+
+---
+
+### Pattern 2: Position Summary Table
+
+```typescript
+console.table(
+  profile.lending_positions.map(pos => ({
+    Protocol: `${pos.protocol} ${pos.protocol_version}`,
+    Chain: pos.chain,
+    Collateral: `$${pos.collateral_usd.toLocaleString()}`,
+    Debt: `$${pos.borrowed_usd.toLocaleString()}`,
+    'Health Factor': pos.health_factor.toFixed(3),
+    'At Risk': pos.is_at_risk ? '⚠️' : '✅'
+  }))
+);
+```
+
+**Output:**
+
+```
+┌─────────┬──────────┬──────────┬──────────────┬─────────────┬────────────────┬─────────┐
+│ (index) │ Protocol │ Chain    │ Collateral   │ Debt        │ Health Factor  │ At Risk │
+├─────────┼──────────┼──────────┼──────────────┼─────────────┼────────────────┼─────────┤
+│    0    │ 'Aave V3'│'Ethereum'│ '$2,077M'    │ '$1,853M'   │ '1.065'        │  '⚠️'   │
+│    1    │ 'Aave V3'│ 'Base'   │ '$62.8M'     │ '$51.4M'    │ '1.160'        │  '⚠️'   │
+└─────────┴──────────┴──────────┴──────────────┴─────────────┴────────────────┴─────────┘
+```
+
+---
+
+### Pattern 3: Immediate Actions Check
+
+```typescript
+const immediateActions = profile.defi_score?.recommendations?.immediate ?? [];
+
+if (immediateActions.length > 0) {
+  console.log('🚨 URGENT ACTIONS REQUIRED:');
+  immediateActions.forEach(action => console.log(`  - ${action}`));
+} else {
+  console.log('✅ No urgent actions needed');
+}
+```
+
+---
+
+### Pattern 4: Multi-Chain Breakdown
+
+```typescript
+const chainSummary = profile.lending_positions.reduce((acc, pos) => {
+  if (!acc[pos.chain]) {
+    acc[pos.chain] = {
+      positions: 0,
+      collateral: 0,
+      debt: 0
+    };
+  }
+  acc[pos.chain].positions++;
+  acc[pos.chain].collateral += pos.collateral_usd;
+  acc[pos.chain].debt += pos.borrowed_usd;
+  return acc;
+}, {});
+
+console.log('Chain Summary:');
+Object.entries(chainSummary).forEach(([chain, data]) => {
+  console.log(`  ${chain}: ${data.positions} positions, $${data.collateral.toLocaleString()} collateral`);
+});
+```
+
+**Output:**
+
+```
+Chain Summary:
+  Ethereum: 1 positions, $2,077,178,086 collateral
+  Base: 1 positions, $62,779,632 collateral
+```
+
+---
+
+### Pattern 5: Liquidation Risk Alert
+
+```typescript
+const { buffer_percentage, scenarios } = profile.defi_score.liquidation_simulation;
+
+const liquidatedScenarios = scenarios.filter(s => s.status === 'LIQUIDATED');
+
+if (liquidatedScenarios.length > 0) {
+  console.log(`⚠️ LIQUIDATION RISK: ${buffer_percentage.toFixed(1)}% buffer remaining`);
+  console.log(`   Liquidated if collateral drops ${liquidatedScenarios[0].event}`);
+} else {
+  console.log('✅ No liquidation risk in stress test scenarios');
+}
+```
+
+---
+
+## Complete Response Reference
+
+### Minimal Response (No Positions)
+
+```json
+{
+  "wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "total_collateral_usd": 0,
+  "total_borrowed_usd": 0,
+  "global_health_factor": 0,
+  "global_ltv": 0,
+  "positions_at_risk_count": 0,
+  "last_updated": "2025-10-21T04:19:25Z",
+  "aggregation_duration": "0.652s",
+  "lending_positions": [],
+  "defi_score": null
+}
+```
+
+---
+
+### Full Response (With Positions)
+
+See the [complete example in the endpoint documentation →](/api/endpoints/risk-profile#example-1-whale-wallet-high-risk)
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Check `defi_score` for null** before accessing properties
+- **Use `risk_category` for logic** (not numeric score ranges)
+- **Handle `aggregation_errors`** gracefully (log warnings, don't fail)
+- **Use `is_at_risk` flag** for quick filtering
+- **Cache responses client-side** for at least 30 seconds
+- **Check `collateral_details` for null** before iterating
+
+### ❌ DON'T
+
+- **Don't assume positions exist** - always check `lending_positions.length`
+- **Don't ignore `aggregation_errors`** - you might have incomplete data
+- **Don't compare health factors across protocols** without understanding their liquidation thresholds
+- **Don't refetch more than once per 30 seconds** (you'll get cached data anyway)
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/understanding-responses/defi-score" className="button button--primary button--lg">
+    🧮 DeFi Score Deep-Dive
+  </a>
+  <a href="/api/understanding-responses/liquidation-simulation" className="button button--secondary button--lg">
+    💥 Liquidation Scenarios
+  </a>
+  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+    💻 Code Examples
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Confused about a field?** Email api@kixago.com
+- **See unexpected data?** Check [error handling guide](/api/guides/error-handling)
+- **Want to see the schema?** [Download OpenAPI spec](/openapi.yaml)
+```
+
+---

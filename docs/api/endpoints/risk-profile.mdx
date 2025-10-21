@@ -1,0 +1,1084 @@
+---
+sidebar_position: 1
+title: "GET /v1/risk-profile/{wallet}"
+description: "Get complete DeFi credit profile and risk score"
+---
+
+# GET /v1/risk-profile/{wallet}
+
+Get a complete DeFi credit profile for any wallet address, including FICO-style credit score, lending positions across all protocols/chains, risk analysis, and liquidation scenarios.
+
+---
+
+## Endpoint
+
+```
+GET https://api.kixago.com/v1/risk-profile/{walletAddress}
+```
+
+**Authentication:** Required (API key)
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `walletAddress` | string | Yes | Ethereum address (0x...) or ENS name (vitalik.eth) |
+
+### Address Format
+
+**Ethereum Address:**
+- Must start with `0x`
+- Must be exactly **42 characters** (0x + 40 hex characters)
+- Case-insensitive (checksummed or lowercase both work)
+- Example: `0xf0bb20865277aBd641a307eCe5Ee04E79073416C`
+
+**ENS Name:**
+- Must end with `.eth`
+- Will be resolved to Ethereum address on-chain
+- Example: `vitalik.eth`
+
+---
+
+## Request Headers
+
+| Header | Required | Description | Example |
+|--------|----------|-------------|---------|
+| `X-API-Key` | Yes* | Your Kixago API key | `kixakey_7eBHF9Ndxd...` |
+| `Authorization` | Yes* | Bearer token (alternative) | `Bearer kixakey_7eBHF9Ndxd...` |
+
+*One of the two authentication headers is required. See [Authentication](/api/authentication) for details.
+
+---
+
+## Request Examples
+
+### Basic Request (curl)
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+### With ENS Name
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/vitalik.eth"
+```
+
+### Using Bearer Token
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+---
+
+## Response Schema
+
+The response is a comprehensive JSON object with the following structure:
+
+### Top-Level Fields
+
+```typescript
+{
+  // Portfolio Summary
+  wallet_address: string;
+  total_collateral_usd: number;
+  total_borrowed_usd: number;
+  global_health_factor: number;
+  global_ltv: number;
+  positions_at_risk_count: number;
+  last_updated: string; // ISO 8601 timestamp
+  aggregation_duration: string; // e.g., "4.682s"
+  
+  // DeFi Credit Score (300-850)
+  defi_score: DeFiScore | null;
+  
+  // Individual Positions
+  lending_positions: LendingPosition[];
+  
+  // Protocol Errors (non-fatal)
+  aggregation_errors?: Record<string, string>;
+}
+```
+
+---
+
+## Response Fields Reference
+
+### Portfolio Summary Fields
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `wallet_address` | string | Ethereum address (normalized to checksum format) | `"0xf0bb20865277aBd641a307eCe5Ee04E79073416C"` |
+| `total_collateral_usd` | number | Total collateral value across all protocols/chains | `2139957718.47` |
+| `total_borrowed_usd` | number | Total debt value across all protocols/chains | `1905081695.88` |
+| `global_health_factor` | number | Portfolio-wide liquidation risk (< 1.0 = liquidated) | `1.067` |
+| `global_ltv` | number | Loan-to-value ratio (%) across entire portfolio | `89.02` |
+| `positions_at_risk_count` | number | Count of positions with health factor < 1.2 | `2` |
+| `last_updated` | string | Timestamp when data was last fetched | `"2025-10-21T04:19:25Z"` |
+| `aggregation_duration` | string | Time taken to fetch all data | `"4.682s"` |
+
+---
+
+### DeFi Score Object
+
+The `defi_score` object contains the complete credit analysis:
+
+```typescript
+{
+  defi_score: number;              // 300-850 FICO-style score
+  risk_level: string;              // Human-readable risk level
+  risk_category: string;           // Enum for programmatic use
+  color: string;                   // UI color indicator
+  score_breakdown: ScoreBreakdown; // 5 component scores
+  risk_factors: RiskFactor[];      // Specific issues
+  recommendations: Recommendations; // Actionable advice
+  liquidation_simulation: LiquidationSimulation;
+  calculated_at: string;           // ISO 8601 timestamp
+}
+```
+
+#### DeFi Score Fields
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `defi_score` | number | Final credit score (300-850 range) | `467` |
+| `risk_level` | string | Human-readable risk level | `"High Risk"` |
+| `risk_category` | enum | Programmatic risk level | `"HIGH_RISK"` |
+| `color` | string | Suggested UI color | `"orange"` |
+| `calculated_at` | string | When score was calculated | `"2025-10-21T04:19:25Z"` |
+
+**Risk Category Enum Values:**
+- `"VERY_LOW_RISK"` (750-850)
+- `"LOW_RISK"` (650-749)
+- `"MODERATE_RISK"` (550-649)
+- `"HIGH_RISK"` (450-549)
+- `"URGENT_ACTION_REQUIRED"` (300-449)
+
+**Color Values:**
+- `"green"` (Very Low Risk)
+- `"blue"` (Low Risk)
+- `"yellow"` (Medium Risk)
+- `"orange"` (High Risk)
+- `"red"` (Very High Risk)
+
+---
+
+### Score Breakdown
+
+The `score_breakdown` object shows how the final score was calculated:
+
+```typescript
+{
+  health_factor_score: ComponentScore;
+  leverage_score: ComponentScore;
+  diversification_score: ComponentScore;
+  volatility_score: ComponentScore;
+  protocol_risk_score: ComponentScore;
+  total_internal_score: number; // 0-100 (before mapping to 300-850)
+}
+```
+
+**Component Score Structure:**
+
+```typescript
+{
+  component_score: number;         // 0-100
+  weight: number;                  // 0.0-1.0 (component importance)
+  weighted_contribution: number;   // component_score × weight
+  reasoning: string;               // Human explanation
+}
+```
+
+**Component Weights:**
+
+| Component | Weight | What It Measures |
+|-----------|--------|------------------|
+| `health_factor_score` | 40% | Proximity to liquidation |
+| `leverage_score` | 30% | Debt-to-collateral ratio (LTV) |
+| `diversification_score` | 15% | Asset & protocol concentration |
+| `volatility_score` | 10% | Collateral asset risk |
+| `protocol_risk_score` | 5% | Smart contract maturity |
+
+[See complete scoring methodology →](/api/understanding-responses/defi-score)
+
+---
+
+### Risk Factors
+
+Array of specific issues that lowered the score:
+
+```typescript
+{
+  severity: "critical" | "high" | "medium" | "low";
+  factor: string;           // Short name
+  description: string;      // Detailed explanation
+  impact_on_score: number;  // Negative number (e.g., -40)
+}
+```
+
+**Example:**
+
+```json
+{
+  "severity": "critical",
+  "factor": "Imminent Liquidation Risk",
+  "description": "Health factor 1.067 means position will be liquidated if collateral value drops 6.7%",
+  "impact_on_score": -40
+}
+```
+
+---
+
+### Recommendations
+
+Actionable advice categorized by urgency:
+
+```typescript
+{
+  immediate: string[];   // Do within 24 hours
+  short_term: string[];  // Do within 1 week
+  long_term: string[];   // Strategic goals (1-3 months)
+}
+```
+
+**Example:**
+
+```json
+{
+  "immediate": [
+    "🚨 URGENT: Deposit $381M more collateral OR repay debt to raise health factor above 1.5"
+  ],
+  "short_term": [
+    "Consider converting some volatile collateral to stablecoins or blue chips (WBTC, ETH)"
+  ],
+  "long_term": [
+    "Maintain health factor above 2.0 for optimal safety margin",
+    "Target LTV below 50% for conservative risk profile"
+  ]
+}
+```
+
+---
+
+### Liquidation Simulation
+
+What-if scenario modeling for price drops:
+
+```typescript
+{
+  current_health_factor: number;
+  liquidation_threshold: number; // Always 1.0
+  buffer_percentage: number;     // % price can drop before liquidation
+  scenarios: Array<{
+    event: string;                 // "Collateral drops 5%"
+    new_health_factor: number;
+    status: "Safe" | "Near liquidation" | "LIQUIDATED";
+    time_estimate?: string;        // Optional timing estimate
+    estimated_loss?: string;       // Optional loss estimate
+  }>;
+}
+```
+
+**Example:**
+
+```json
+{
+  "current_health_factor": 1.067,
+  "liquidation_threshold": 1.0,
+  "buffer_percentage": 6.73,
+  "scenarios": [
+    {
+      "event": "Collateral drops 5%",
+      "new_health_factor": 1.014,
+      "status": "Near liquidation",
+      "time_estimate": "~6 hours if price trend continues"
+    },
+    {
+      "event": "Collateral drops 10%",
+      "new_health_factor": 0.961,
+      "status": "LIQUIDATED",
+      "estimated_loss": "~$214M in liquidation penalties"
+    }
+  ]
+}
+```
+
+---
+
+### Lending Positions
+
+Array of individual positions across protocols and chains:
+
+```typescript
+{
+  protocol: string;              // "Aave", "Compound", "MakerDAO"
+  protocol_version: string;      // "V3", "V2", "1"
+  chain: string;                 // "Ethereum", "Base", "Arbitrum", "Polygon"
+  user_address: string;          // Wallet address
+  collateral_usd: number;        // Total collateral for this position
+  borrowed_usd: number;          // Total debt for this position
+  health_factor: number;         // Position-specific health factor
+  ltv_current: number;           // Position-specific LTV (%)
+  is_at_risk: boolean;           // true if health_factor < 1.2
+  collateral_details: TokenDetail[];
+  borrowed_details: TokenDetail[];
+  last_updated: string;          // ISO 8601 timestamp
+}
+```
+
+**TokenDetail Structure:**
+
+```typescript
+{
+  token: string;         // Symbol (e.g., "WETH", "USDC")
+  amount: number;        // Token amount in native decimals
+  usd_value: number;     // Current USD value
+  token_address: string; // Contract address
+}
+```
+
+**Example Position:**
+
+```json
+{
+  "protocol": "Aave",
+  "protocol_version": "V3",
+  "chain": "Ethereum",
+  "user_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "collateral_usd": 2077178086.09,
+  "borrowed_usd": 1853661183.91,
+  "health_factor": 1.065,
+  "ltv_current": 89.24,
+  "is_at_risk": true,
+  "collateral_details": [
+    {
+      "token": "weETH",
+      "amount": 496800.01,
+      "usd_value": 2077178086.09,
+      "token_address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+    }
+  ],
+  "borrowed_details": [
+    {
+      "token": "WETH",
+      "amount": 478632.98,
+      "usd_value": 1853661183.91,
+      "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    }
+  ],
+  "last_updated": "2025-10-21T04:19:25Z"
+}
+```
+
+---
+
+### Aggregation Errors (Optional)
+
+Non-fatal errors from individual protocols:
+
+```typescript
+{
+  [protocolKey: string]: string; // Error message
+}
+```
+
+**Protocol Key Format:** `"Protocol:Chain"` (e.g., `"CompoundV3:Ethereum"`)
+
+**Example:**
+
+```json
+{
+  "aggregation_errors": {
+    "CompoundV3:Ethereum": "could not get numAssets from Compound V3 market"
+  }
+}
+```
+
+:::info Non-Fatal Errors
+Protocol errors **do not fail the entire request**. You still receive data from successful protocols.
+
+Common causes:
+- RPC rate limits (Alchemy compute units exceeded)
+- Protocol contract changes
+- Network timeouts
+
+Always check this field and handle partial failures gracefully.
+:::
+
+---
+
+## Response Examples
+
+### Example 1: Whale Wallet (High Risk)
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "wallet_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "total_collateral_usd": 2139957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  "positions_at_risk_count": 2,
+  "last_updated": "2025-10-21T04:19:25.986916933Z",
+  "aggregation_duration": "4.682898286s",
+  
+  "defi_score": {
+    "defi_score": 474,
+    "risk_level": "High Risk",
+    "risk_category": "HIGH_RISK",
+    "color": "orange",
+    
+    "score_breakdown": {
+      "health_factor_score": {
+        "component_score": 20,
+        "weight": 0.4,
+        "weighted_contribution": 8.0,
+        "reasoning": "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with <10% price drop."
+      },
+      "leverage_score": {
+        "component_score": 20,
+        "weight": 0.3,
+        "weighted_contribution": 6.0,
+        "reasoning": "LTV 86-95% is very aggressive. Extremely vulnerable to liquidation on minor price movements."
+      },
+      "diversification_score": {
+        "component_score": 85,
+        "weight": 0.15,
+        "weighted_contribution": 12.75,
+        "reasoning": "Diversification across 2 protocol(s) and 1 asset(s). Top asset represents 2.9% of collateral."
+      },
+      "volatility_score": {
+        "component_score": 1.47,
+        "weight": 0.1,
+        "weighted_contribution": 0.147,
+        "reasoning": "Heavy concentration in high-volatility or long-tail assets. Extreme price risk."
+      },
+      "protocol_risk_score": {
+        "component_score": 95,
+        "weight": 0.05,
+        "weighted_contribution": 4.75,
+        "reasoning": "All positions in highly trusted, battle-tested protocols (Aave, Compound, Maker)."
+      },
+      "total_internal_score": 31.647
+    },
+    
+    "risk_factors": [
+      {
+        "severity": "critical",
+        "factor": "Imminent Liquidation Risk",
+        "description": "Health factor 1.067 means position will be liquidated if collateral value drops 6.7%",
+        "impact_on_score": -40
+      },
+      {
+        "severity": "high",
+        "factor": "Extreme Leverage",
+        "description": "89.0% LTV leaves minimal safety buffer before liquidation",
+        "impact_on_score": -30
+      },
+      {
+        "severity": "medium",
+        "factor": "Volatile Collateral",
+        "description": "High leverage combined with volatile collateral creates elevated liquidation risk during market downturns.",
+        "impact_on_score": -10
+      }
+    ],
+    
+    "recommendations": {
+      "immediate": [
+        "URGENT: Deposit $381M more collateral OR repay debt to raise health factor above 1.5",
+        "URGENT: Repay $286M debt to reduce LTV below 70%"
+      ],
+      "short_term": [
+        "Consider converting some volatile collateral to stablecoins or blue chips (WBTC, ETH)"
+      ],
+      "long_term": [
+        "Maintain health factor above 2.0 for optimal safety margin",
+        "Target LTV below 50% for conservative risk profile",
+        "Build emergency reserves to handle liquidation scenarios"
+      ]
+    },
+    
+    "liquidation_simulation": {
+      "current_health_factor": 1.0673483103890975,
+      "liquidation_threshold": 1.0,
+      "buffer_percentage": 6.73483103890975,
+      "scenarios": [
+        {
+          "event": "Collateral drops 5%",
+          "new_health_factor": 1.0139808948696425,
+          "status": "Near liquidation",
+          "time_estimate": "~6 hours if price trend continues",
+          "estimated_loss": ""
+        },
+        {
+          "event": "Collateral drops 10%",
+          "new_health_factor": 0.9606134793501878,
+          "status": "LIQUIDATED",
+          "time_estimate": "",
+          "estimated_loss": "~$214M in liquidation penalties"
+        },
+        {
+          "event": "Collateral drops 20% (stress test)",
+          "new_health_factor": 0.853878648311278,
+          "status": "LIQUIDATED",
+          "time_estimate": "",
+          "estimated_loss": "~$321M in liquidation penalties"
+        }
+      ]
+    },
+    
+    "calculated_at": "2025-10-21T04:19:25.987006056Z"
+  },
+  
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Base",
+      "user_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+      "collateral_usd": 62779632.3785554,
+      "borrowed_usd": 51420511.96722936,
+      "health_factor": 1.1598610841844013,
+      "ltv_current": 81.9063604214316,
+      "is_at_risk": true,
+      "collateral_details": [
+        {
+          "token": "weETH",
+          "amount": 15000.000846521907,
+          "usd_value": 62779632.3785554,
+          "token_address": "0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A"
+        }
+      ],
+      "borrowed_details": [
+        {
+          "token": "WETH",
+          "amount": 13263.608412550884,
+          "usd_value": 51420511.96722935,
+          "token_address": "0x4200000000000000000000000000000000000006"
+        }
+      ],
+      "last_updated": "2025-10-21T04:19:24.172942614Z"
+    },
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "user_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+      "collateral_usd": 2077178086.0871801,
+      "borrowed_usd": 1853661183.9097233,
+      "health_factor": 1.064552248766798,
+      "ltv_current": 89.23939629083513,
+      "is_at_risk": true,
+      "collateral_details": null,
+      "borrowed_details": [
+        {
+          "token": "WETH",
+          "amount": 478632.9767725873,
+          "usd_value": 1853661183.9097233,
+          "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        }
+      ],
+      "last_updated": "2025-10-21T04:19:25.986860777Z"
+    }
+  ],
+  
+  "aggregation_errors": {
+    "CompoundV3:Ethereum": "could not get numAssets from Compound V3 market"
+  }
+}
+```
+
+---
+
+### Example 2: Healthy Wallet (Low Risk)
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xHealthyWallet..."
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "wallet_address": "0xHealthy123...",
+  "total_collateral_usd": 100000.00,
+  "total_borrowed_usd": 30000.00,
+  "global_health_factor": 3.2,
+  "global_ltv": 30.0,
+  "positions_at_risk_count": 0,
+  "last_updated": "2025-10-21T04:19:25Z",
+  "aggregation_duration": "0.891s",
+  
+  "defi_score": {
+    "defi_score": 782,
+    "risk_level": "Very Low Risk",
+    "risk_category": "VERY_LOW_RISK",
+    "color": "green",
+    
+    "score_breakdown": {
+      "health_factor_score": {
+        "component_score": 100,
+        "weight": 0.4,
+        "weighted_contribution": 40.0,
+        "reasoning": "Health factor >= 2.0 is extremely safe."
+      },
+      "leverage_score": {
+        "component_score": 100,
+        "weight": 0.3,
+        "weighted_contribution": 30.0,
+        "reasoning": "LTV 0-30% is minimal leverage."
+      },
+      "diversification_score": {
+        "component_score": 20,
+        "weight": 0.15,
+        "weighted_contribution": 3.0,
+        "reasoning": "Diversification across 1 protocol(s) and 2 asset(s)."
+      },
+      "volatility_score": {
+        "component_score": 100,
+        "weight": 0.1,
+        "weighted_contribution": 10.0,
+        "reasoning": "Collateral primarily in low-volatility assets (stablecoins)."
+      },
+      "protocol_risk_score": {
+        "component_score": 95,
+        "weight": 0.05,
+        "weighted_contribution": 4.75,
+        "reasoning": "All positions in highly trusted protocols."
+      },
+      "total_internal_score": 87.75
+    },
+    
+    "risk_factors": [],
+    
+    "recommendations": {
+      "immediate": [],
+      "short_term": [
+        "Consider diversifying across protocols to reduce smart contract risk"
+      ],
+      "long_term": [
+        "Maintain health factor above 2.0 for optimal safety"
+      ]
+    },
+    
+    "liquidation_simulation": {
+      "current_health_factor": 3.2,
+      "liquidation_threshold": 1.0,
+      "buffer_percentage": 220.0,
+      "scenarios": [
+        {
+          "event": "Collateral drops 5%",
+          "new_health_factor": 3.04,
+          "status": "Safe",
+          "time_estimate": "",
+          "estimated_loss": ""
+        },
+        {
+          "event": "Collateral drops 10%",
+          "new_health_factor": 2.88,
+          "status": "Safe",
+          "time_estimate": "",
+          "estimated_loss": ""
+        },
+        {
+          "event": "Collateral drops 20% (stress test)",
+          "new_health_factor": 2.56,
+          "status": "Safe",
+          "time_estimate": "",
+          "estimated_loss": ""
+        }
+      ]
+    },
+    
+    "calculated_at": "2025-10-21T04:19:25Z"
+  },
+  
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "collateral_usd": 100000.00,
+      "borrowed_usd": 30000.00,
+      "health_factor": 3.2,
+      "ltv_current": 30.0,
+      "is_at_risk": false,
+      "collateral_details": [
+        {
+          "token": "USDC",
+          "amount": 100000.00,
+          "usd_value": 100000.00,
+          "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        }
+      ],
+      "borrowed_details": [
+        {
+          "token": "DAI",
+          "amount": 30000.00,
+          "usd_value": 30000.00,
+          "token_address": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+        }
+      ],
+      "last_updated": "2025-10-21T04:19:25Z"
+    }
+  ]
+}
+```
+
+---
+
+### Example 3: Wallet with No Positions
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/vitalik.eth"
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "total_collateral_usd": 0,
+  "total_borrowed_usd": 0,
+  "global_health_factor": 0,
+  "global_ltv": 0,
+  "positions_at_risk_count": 0,
+  "last_updated": "2025-10-21T04:19:25Z",
+  "aggregation_duration": "0.652s",
+  "lending_positions": [],
+  "defi_score": null
+}
+```
+
+:::info
+This is a **valid response**. The wallet has no active DeFi lending positions.
+
+`defi_score` is `null` when no positions are found (cannot calculate a score without data).
+:::
+
+---
+
+## Error Responses
+
+### 400 Bad Request - Invalid Address
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/invalid"
+```
+
+**Response:**
+
+```json
+{
+  "error": "invalid address format - use hex address or ENS name"
+}
+```
+
+---
+
+### 400 Bad Request - ENS Resolution Failed
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/nonexistent.eth"
+```
+
+**Response:**
+
+```json
+{
+  "error": "could not resolve ENS name: nonexistent.eth"
+}
+```
+
+---
+
+### 401 Unauthorized - Missing API Key
+
+**Request:**
+
+```bash
+curl "https://api.kixago.com/v1/risk-profile/0xf0bb..."
+```
+
+**Response:**
+
+```json
+{
+  "error": "missing or invalid API key"
+}
+```
+
+---
+
+### 429 Too Many Requests - Rate Limit Exceeded
+
+**Request:**
+
+```bash
+# (after exceeding rate limit)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb..."
+```
+
+**Response:**
+
+```json
+{
+  "error": "rate limit exceeded",
+  "retry_after": 5
+}
+```
+
+**Headers:**
+
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1705334405
+Retry-After: 5
+```
+
+---
+
+### 500 Internal Server Error
+
+**Request:**
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb..."
+```
+
+**Response:**
+
+```json
+{
+  "error": "Error generating portfolio risk"
+}
+```
+
+:::tip
+If you encounter 500 errors:
+1. Check the `aggregation_errors` field (if response is partial)
+2. Retry after a few seconds (may be temporary RPC issue)
+3. Contact support if persistent: api@kixago.com
+:::
+
+---
+
+## Response Headers
+
+### Cache Status
+
+Every response includes a cache status header:
+
+```http
+X-Cache-Status: HIT
+```
+
+**Values:**
+- `MISS` - Fresh data fetched from blockchain (1-5 seconds)
+- `HIT` - Served from cache (<100ms)
+
+**Cache TTL:** 30 seconds
+
+---
+
+### Rate Limit Headers
+
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 1705334400
+```
+
+[See rate limits →](/api/authentication#rate-limits)
+
+---
+
+## Performance
+
+### Response Times
+
+Based on production data:
+
+| Scenario | Duration | Details |
+|----------|----------|---------|
+| **Cache HIT** | <100ms | Served from Valkey cache |
+| **Cache MISS (single chain)** | 1-2s | Ethereum only |
+| **Cache MISS (multi-chain)** | 2-5s | Concurrent fetching |
+| **Timeout** | 30s max | Graceful degradation |
+
+**Example from logs:**
+
+```
+Cache MISS: 4.682898286s
+Cache HIT:  538µs (0.000538s)
+```
+
+---
+
+### Caching Behavior
+
+- ✅ **30-second TTL** - Results cached for 30 seconds
+- ✅ **Per-wallet cache key** - Each address cached separately
+- ✅ **Check `X-Cache-Status` header** - Know if data is fresh or cached
+- ✅ **`last_updated` timestamp** - Every position shows when it was fetched
+
+**Best practice:** Cache on your side for at least 30 seconds as well.
+
+---
+
+## Supported Protocols & Chains
+
+| Protocol | Versions | Chains |
+|----------|----------|--------|
+| **Aave** | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| **Compound** | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| **MakerDAO** | Vaults (V1) | Ethereum |
+
+**Total coverage:** 7 protocol integrations across 4 chains
+
+---
+
+## Use Case Examples
+
+### Credit Underwriting
+
+```typescript
+async function checkCreditworthiness(walletAddress: string) {
+  const profile = await getRiskProfile(walletAddress);
+  
+  // Quick decision logic
+  if (profile.defi_score.risk_category === 'VERY_LOW_RISK' || 
+      profile.defi_score.risk_category === 'LOW_RISK') {
+    return {
+      decision: 'APPROVED',
+      reason: `Strong DeFi credit score: ${profile.defi_score.defi_score}`
+    };
+  }
+  
+  if (profile.defi_score.risk_category === 'HIGH_RISK' ||
+      profile.defi_score.risk_category === 'URGENT_ACTION_REQUIRED') {
+    return {
+      decision: 'DECLINED',
+      reason: `High liquidation risk: Health factor ${profile.global_health_factor.toFixed(2)}`
+    };
+  }
+  
+  return {
+    decision: 'MANUAL_REVIEW',
+    reason: 'Moderate risk - requires underwriter review'
+  };
+}
+```
+
+---
+
+### Liquidation Monitoring
+
+```typescript
+async function monitorLiquidationRisk(walletAddresses: string[]) {
+  const alerts = [];
+  
+  for (const address of walletAddresses) {
+    const profile = await getRiskProfile(address);
+    
+    // Alert on positions at risk
+    if (profile.global_health_factor < 1.15 && profile.total_collateral_usd > 1000000) {
+      alerts.push({
+        wallet: address,
+        collateral: profile.total_collateral_usd,
+        health_factor: profile.global_health_factor,
+        buffer: profile.defi_score.liquidation_simulation.buffer_percentage,
+        urgency: profile.global_health_factor < 1.05 ? 'CRITICAL' : 'WARNING'
+      });
+    }
+  }
+  
+  return alerts;
+}
+```
+
+---
+
+### Portfolio Verification
+
+```typescript
+async function generateClientReport(clientAddress: string) {
+  const profile = await getRiskProfile(clientAddress);
+  
+  return {
+    summary: {
+      total_aum: profile.total_collateral_usd,
+      total_debt: profile.total_borrowed_usd,
+      net_worth: profile.total_collateral_usd - profile.total_borrowed_usd,
+      credit_score: profile.defi_score.defi_score,
+      risk_level: profile.defi_score.risk_level
+    },
+    positions: profile.lending_positions.map(pos => ({
+      protocol: pos.protocol,
+      chain: pos.chain,
+      collateral: pos.collateral_usd,
+      debt: pos.borrowed_usd,
+      health: pos.health_factor
+    })),
+    recommendations: profile.defi_score.recommendations,
+    action_required: profile.defi_score.recommendations.immediate.length > 0
+  };
+}
+```
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/understanding-responses/overview" className="button button--primary button--lg">
+    🔍 Response Structure Deep-Dive
+  </a>
+  <a href="/api/understanding-responses/defi-score" className="button button--secondary button--lg">
+    🧮 How Scoring Works
+  </a>
+  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+    💻 More Code Examples
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **API Issues:** api@kixago.com
+- **OpenAPI Spec:** [Download YAML](/openapi.yaml)
+- **Report Bugs:** [GitHub Issues](https://github.com/kixago/api-issues)
+```
+
+---

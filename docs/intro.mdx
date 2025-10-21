@@ -1,209 +1,456 @@
+You're absolutely right\! My apologies for over-integrating.
+
+The goal is to reformat the provided content block into a clean, correct **MDX file** (`docs/api/index.mdx`) suitable for a Docusaurus or similar documentation site, while incorporating the subtle updates from your reference files (like confirming the final whale score of **467** is the intended value for the quick example).
+
+Here is the complete content, rewritten in the requested MDX format:
+
+````mdx
 ---
 sidebar_position: 1
-slug: /intro
+sidebar_label: "API Overview"
+title: "Kixago API Documentation"
+description: "DeFi credit intelligence API - Real-time risk scoring and portfolio analysis"
 ---
 
-# Welcome to Kixago
+# Kixago API Documentation
 
-**Query all your DeFi lending positions with one API call.**
+**Real-time DeFi credit scoring and risk analysis API**
 
-Kixago is a DeFi data aggregator that solves the multi-protocol, multi-chain integration problem. Instead of building separate integrations for Aave on Ethereum, Aave on Polygon, Compound V2, Compound V3, and MakerDAO—you call our API once and get everything back in a normalized format.
+Get complete portfolio analysis across all major DeFi protocols and chains in a single API call.
 
-## The Problem We Solve
+---
 
-Let's say you want to build a simple dashboard showing a user's lending positions. Here's what you'd normally do:
+## What This API Returns
 
-```typescript
-// Without Kixago (the hard way) ❌
-const aaveEthereumData = await aaveAPI.getUserData(address, 'ethereum');
-const aavePolygonData = await aaveAPI.getUserData(address, 'polygon');
-const aaveArbitrumData = await aaveAPI.getUserData(address, 'arbitrum');
-const compoundData = await compoundAPI.getAccountLiquidity(address);
-const makerData = await makerVault.getVault(address);
+| Data | Response Time | Coverage |
+| :--- | :--- | :--- |
+| **DeFi Credit Score** (300-850) | 1-4 seconds | Aave V2/V3, Compound V2/V3, MakerDAO |
+| **Complete lending positions** | Cached: <100ms | Ethereum, Base, Arbitrum, Polygon |
+| **Liquidation scenarios** | | Token-level collateral/debt breakdown |
+| **Risk factors + recommendations** | | Real-time on-chain data (30s cache) |
 
-// Now manually normalize 5 different response formats...
-// Handle different decimal formats...
-// Convert health factors that mean different things...
-// Map collateral types...
-// Spend 2 weeks debugging edge cases...
-```
+---
 
-With Kixago, it's just:
+## Quick Example
 
-```typescript
-// With Kixago (the easy way) ✅
-const response = await fetch(
-  `https://api.kixago.com/api/v1/lending/positions?address=${address}`
-);
-const { positions } = await response.json();
-
-// Done. All protocols. All chains. One format.
-```
-
-## What Makes Kixago Different
-
-| Feature               | Kixago                               | Other APIs                       |
-| --------------------- | ------------------------------------ | -------------------------------- |
-| **Multi-Protocol**    | Aave, Compound, MakerDAO in one call | One protocol at a time           |
-| **Multi-Chain**       | Ethereum, Polygon, Arbitrum, Base    | Single chain or manual iteration |
-| **Normalized Format** | Same structure for all protocols     | Different response for each      |
-| **Real-Time**         | Direct blockchain queries            | Often delayed by indexers        |
-
-## Quick Start (60 seconds)
-
-### Step 1: Get Your API Key
-
-Visit [kixago.com/dashboard](https://kixago.com/dashboard) and sign up. You'll get an API key that looks like:
-
-```
-kixakey_7eBHF9Ndxd_7eBHF9Ndxdq-I3q4Ds4nULLPQd-vElx9KC8fa6NDZiw
-```
-
-⚠️ Save it immediately - keys are only shown once!
-
-### Step 2: Make Your First API Call
+### Request
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://api.kixago.com/api/v1/lending/positions?address=0xYourAddressHere"
-```
+curl -H "X-API-Key: your_api_key" \
+  "[https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C](https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C)"
+````
 
-### Step 3: Sample Response
+### Response (excerpt)
 
 ```json
 {
-  "success": true,
-  "data": {
-    "positions": [
+  "wallet_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "total_collateral_usd": 2175957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  "positions_at_risk_count": 2,
+  "defi_score": {
+    "defi_score": 467,
+    "risk_level": "High Risk",
+    "risk_category": "HIGH_RISK",
+    "risk_factors": [
       {
-        "protocol": "aave",
-        "protocol_version": "v3",
-        "chain": "base",
-        "user_address": "0xf0bb20865277abd641a307ece5ee04e79073416c",
-        "collateral_details": [
-          {
-            "token": "WETH",
-            "amount": 1.5,
-            "usd_value": 4500.00,
-            "apy": 2.3,
-            "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-          }
-        ],
-        "borrowed_details": [
-          {
-            "token": "USDC",
-            "amount": 2000.00,
-            "usd_value": 2000.00,
-            "apy": 5.8,
-            "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-          }
-        ],
-        "collateral_usd": 4500.00,
-        "borrowed_usd": 2000.00,
-        "ltv_current": 0.44,
-        "ltv_liquidation_threshold": 0.80,
-        "health_factor": 1.8,
-        "is_at_risk": false,
-        "time_to_liquidation": "No immediate risk",
-        "last_updated": "2025-10-15T14:30:00Z"
+        "severity": "critical",
+        "factor": "Imminent Liquidation Risk",
+        "description": "Health factor 1.067 means position will be liquidated if collateral value drops 6.7%"
       }
     ],
-    "count": 1,
-    "duration": "2.3s"
+    "recommendations": {
+      "immediate": [
+        "🚨 URGENT: Deposit $387M more collateral OR repay debt to raise health factor above 1.5"
+      ]
+    },
+    "liquidation_simulation": {
+      "scenarios": [
+        {
+          "event": "Collateral drops 10%",
+          "new_health_factor": 0.961,
+          "status": "LIQUIDATED",
+          "estimated_loss": "~$218M in liquidation penalties"
+        }
+      ]
+    }
   },
-  "timestamp": "2025-10-15T14:30:00Z"
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "collateral_usd": 2112215608.12,
+      "borrowed_usd": 1884925796.26,
+      "health_factor": 1.065,
+      "ltv_current": 89.24,
+      "is_at_risk": true,
+      "collateral_details": [
+        {
+          "token": "weETH",
+          "amount": 496800.01,
+          "usd_value": 2112215608.12,
+          "token_address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+        }
+      ],
+      "borrowed_details": [
+        {
+          "token": "WETH",
+          "amount": 478632.98,
+          "usd_value": 1884925796.26,
+          "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-## Common Use Cases
+-----
 
-### Portfolio Dashboard
+## Core Endpoints
 
-```javascript
-const positions = await fetchKixagoPositions(userAddress);
+| Endpoint | Method | Auth | Purpose |
+| :--- | :--- | :--- | :--- |
+| `/v1/risk-profile/{wallet}` | `GET` | Required | Complete portfolio + credit score |
+| `/health` | `GET` | None | API status check |
 
-const byProtocol = positions.reduce((acc, pos) => {
-  acc[pos.protocol] = acc[pos.protocol] || [];
-  acc[pos.protocol].push(pos);
-  return acc;
-}, {});
+[View full endpoint documentation →](/api/endpoints)
 
-const totalCollateral = positions.reduce((sum, pos) => sum + pos.collateral_usd, 0);
+-----
+
+## DeFi Credit Score (300-850)
+
+FICO-style scoring for DeFi lending positions
+
+### Score Ranges
+
+| Score | Risk Level | Description |
+| :--- | :--- | :--- |
+| **750-850** | Very Low Risk | Healthy positions, low leverage |
+| **650-749** | Low Risk | Conservative borrowing |
+| **550-649** | Medium Risk | Moderate leverage |
+| **450-549** | High Risk | Approaching danger zone |
+| **300-449** | Very High Risk | Imminent liquidation risk |
+
+### Scoring Formula
+
+The score is calculated from **5 weighted components**:
+
+| Component | Weight | Measures |
+| :--- | :--- | :--- |
+| Health Factor | 40% | Proximity to liquidation |
+| Leverage (LTV) | 30% | Debt-to-collateral ratio |
+| Diversification | 15% | Concentration risk (assets + protocols) |
+| Volatility Exposure | 10% | Collateral asset risk |
+| Protocol Risk | 5% | Smart contract maturity |
+
+$$
+\text{Internal Score} \; (0-100) = \sum (\text{Component Score} \times \text{Weight})
+$$$$
+\text{Final Score} = (\text{Internal Score} \times 5.5) + 300
+$$### Example calculation for the whale wallet above:
+
+| Component | Calculation | Weighted Score |
+| :--- | :--- | :--- |
+| Health Factor Score | $20/100 \times 0.40$ | $8.0$ |
+| Leverage Score | $20/100 \times 0.30$ | $6.0$ |
+| Diversification Score | $45/100 \times 0.15$ | $6.75$ |
+| Volatility Score | $50/100 \times 0.10$ | $5.0$ |
+| Protocol Risk Score | $95/100 \times 0.05$ | $4.75$ |
+| **Total Internal Score** | | **$30.5$** |
+
+$$\\text{Final Score} = (30.5 \\times 5.5) + 300 = 467.75 \\rightarrow \\mathbf{467}
+$$[Complete scoring methodology →](/api/understanding-responses/defi-score-explained)
+
+-----
+
+## Response Structure
+
+Every response includes:
+
+### 1\. Portfolio Summary (Top-Level)
+
+```json
+{
+  "wallet_address": "0x...",
+  "total_collateral_usd": 2175957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  "positions_at_risk_count": 2,
+  "last_updated": "2025-10-21T04:19:25Z",
+  "aggregation_duration": "1.234s"
+}
 ```
 
-### Liquidation Alerts
+### 2\. Lending Positions (Per Protocol/Chain)
 
-```javascript
-const checkLiquidationRisk = async (address) => {
-  const { positions } = await fetchKixagoPositions(address);
-  const atRisk = positions.filter(p => p.health_factor < 1.5);
-  if (atRisk.length > 0) {
-    await sendAlert({
-      message: `${atRisk.length} positions at risk!`,
-      positions: atRisk
-    });
+```json
+{
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "collateral_usd": 2112215608.12,
+      "borrowed_usd": 1884925796.26,
+      "health_factor": 1.065,
+      "ltv_current": 89.24,
+      "is_at_risk": true,
+      "collateral_details": [ /* token breakdown */ ],
+      "borrowed_details": [ /* token breakdown */ ]
+    }
+  ]
+}
+```
+
+### 3\. DeFi Credit Score
+
+```json
+{
+  "defi_score": {
+    "defi_score": 467,
+    "risk_level": "High Risk",
+    "risk_category": "HIGH_RISK",
+    "score_breakdown": { /* 5 components */ },
+    "risk_factors": [ /* critical issues */ ],
+    "recommendations": { /* immediate/short/long-term */ },
+    "liquidation_simulation": { /* what-if scenarios */ }
   }
-};
-setInterval(() => checkLiquidationRisk(userAddress), 5 * 60 * 1000);
+}
 ```
 
-### Yield Comparison
+### 4\. Partial Failures (Non-Fatal)
 
-```javascript
-const positions = await fetchKixagoPositions(userAddress);
-const usdcPositions = positions.flatMap(p => p.collateral_details.filter(c => c.token === 'USDC'));
-usdcPositions.sort((a, b) => b.apy - a.apy);
-console.log(`Best USDC APY: ${usdcPositions[0].apy}% on ${positions[0].protocol}`);
+```json
+{
+  "aggregation_errors": {
+    "CompoundV3:Ethereum": "could not get numAssets from Compound V3 market"
+  }
+}
 ```
 
-## Protocol Coverage
+**Important:** Protocol errors don't fail the entire request. You still get data from working protocols.
 
-| Protocol     | Versions   | Chains                            | Status |
-| ------------ | ---------- | --------------------------------- | ------ |
-| **Aave**     | V2, V3     | Ethereum, Polygon, Arbitrum, Base | ✅ Live |
-| **Compound** | V2, V3     | Ethereum, Arbitrum, Base, Polygon | ✅ Live |
-| **MakerDAO** | CDP/Vaults | Ethereum                          | ✅ Live |
+-----
 
-## Response Time & Caching
+## Authentication
 
-* **First Query (no cache)**: 2-5 seconds
-* **Subsequent Queries (cached)**: ~50ms, Cache TTL 60s
+All endpoints (except `/health`) require an API key:
+
+```bash
+curl -H "X-API-Key: your_api_key" \
+  "[https://api.kixago.com/v1/risk-profile/0x](https://api.kixago.com/v1/risk-profile/0x)..."
+```
+
+[Get your API key: https://kixago.com/dashboard](https://kixago.com/dashboard)
+
+*Free tier: 10,000 requests/month*
+
+[Authentication details →](/api/authentication)
+
+-----
+
+## Supported Protocols
+
+| Protocol | Versions | Chains |
+| :--- | :--- | :--- |
+| Aave | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| Compound | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| MakerDAO | Vaults (V1) | Ethereum |
+
+*Coming Q2 2025: Morpho, Spark Protocol, Euler V2*
+
+-----
+
+## Response Times
+
+Based on actual production data:
+
+| Scenario | Duration | Notes |
+| :--- | :--- | :--- |
+| **Cache HIT** | \<100ms | Served from cache (30s TTL) |
+| **Cache MISS** | 1-4 seconds | Full multi-chain aggregation |
+| **Single chain** | 1-2 seconds | e.g., Ethereum only |
+| **Multi-chain** | 2-4 seconds | Concurrent fetching |
+| **Timeout** | 30s max | Graceful degradation |
+
+Check cache status via header:
+
+```http
+X-Cache-Status: HIT
+```
+
+### Data Freshness
+
+  * ✅ **Real-time on-chain queries** (not indexed data)
+  * ✅ Own Ethereum/Base nodes (no rate limits)
+  * ✅ **30-second response cache** for performance
+  * ✅ `last_updated` timestamp in every position
+
+We query protocols directly, not via The Graph or other indexers.
+
+-----
+
+## Use Cases
+
+### 1\. Credit Underwriting (Banks/Lenders)
+
+```typescript
+const risk = await kixago.getRiskProfile('0xBorrower...');
+
+if (risk.defi_score >= 700 && risk.global_health_factor > 2.0) {
+  return 'APPROVED';
+} else if (risk.defi_score < 550) {
+  return 'DECLINED - High liquidation risk';
+}
+```
+
+### 2\. Portfolio Verification (Wealth Advisors)
+
+```typescript
+const client = await kixago.getRiskProfile('client.eth');
+
+console.log(`Total AUM: $${client.total_collateral_usd.toLocaleString()}`);
+console.log(`Risk Level: ${client.defi_score.risk_level}`);
+console.log(`Positions: ${client.lending_positions.length} across ${uniqueChains} chains`);
+```
+
+### 3\. Liquidation Monitoring (Traders)
+
+```typescript
+const whales = ['0xWhale1...', '0xWhale2...'];
+
+for (const whale of whales) {
+  const risk = await kixago.getRiskProfile(whale);
+    
+  if (risk.global_health_factor < 1.15) {
+    alert(`🚨 Liquidation opportunity: ${whale}
+           Collateral: $${risk.total_collateral_usd}
+           Buffer: ${risk.defi_score.liquidation_simulation.buffer_percentage}%`);
+  }
+}
+```
+
+[More use case examples →](/api/use-cases)
+
+-----
 
 ## Error Handling
 
+### Invalid Address
+
+```bash
+curl -H "X-API-Key: key" "[https://api.kixago.com/v1/risk-profile/invalid](https://api.kixago.com/v1/risk-profile/invalid)"
+```
+
+Response (400):
+
 ```json
 {
-  "success": true,
-  "data": {
-    "positions": [...],
-    "count": 2,
-    "errors": { "compound-v3:polygon": "RPC timeout" }
-  }
+  "error": "invalid address format - use hex address or ENS name"
 }
 ```
 
+### Missing API Key
+
+```bash
+curl "[https://api.kixago.com/v1/risk-profile/0x](https://api.kixago.com/v1/risk-profile/0x)..."
+```
+
+Response (401):
+
+```json
+{
+  "error": "missing or invalid API key"
+}
+```
+
+### ENS Resolution Failure
+
+```bash
+curl -H "X-API-Key: key" "[https://api.kixago.com/v1/risk-profile/nonexistent.eth](https://api.kixago.com/v1/risk-profile/nonexistent.eth)"
+```
+
+Response (400):
+
+```json
+{
+  "error": "could not resolve ENS name: nonexistent.eth"
+}
+```
+
+[Full error handling guide →](/api/error-handling)
+
+-----
+
+## Next Steps
+
+\<div className="button-group"\>
+\<a href="/api/quickstart" className="button button--primary button--lg"\>
+🚀 5-Minute Quickstart
+\</a\>
+\<a href="/api/endpoints/risk-profile" className="button button--secondary button--lg"\>
+📖 Full API Reference
+\</a\>
+\<a href="/api/understanding-responses/defi-score-explained" className="button button--secondary button--lg"\>
+🧮 How Scoring Works
+\</a\>
+\</div\>
+
+-----
+
 ## Rate Limits
 
-* **Free Tier**: 100 requests/min (planned)
-* **Pro Tier**: 1000 requests/min (planned)
+| Tier | Requests/Month | Rate Limit |
+| :--- | :--- | :--- |
+| Developer (Free) | 10,000 | 10 req/sec |
+| Startup | 100,000 | 50 req/sec |
+| Institution | 1,000,000 | 200 req/sec |
+| Enterprise | Unlimited | Custom |
 
-## What's Next?
+Rate limit headers:
 
-1. [Quick Start Guide →](./quickstart/setup)
-2. [API Reference →](./api/overview)
-3. [Code Examples →](./examples/javascript)
-4. [GitHub Repo →](https://github.com/kixago/defi-aggregator-api)
+```http
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 1634567890
+```
 
-## Need Help?
+-----
 
-* **GitHub Issues**: [Report bugs or request features](https://github.com/kixago/defi-aggregator-api/issues)
-* **Email**: [support@kixago.com](mailto:support@kixago.com)
-* **Discord**: [Join our community](https://discord.gg/kixago)
+## SDKs (Coming Soon)
 
-## Philosophy
+### TypeScript/JavaScript:
 
-1. Developers should focus on building, not integrating
-2. Open source builds trust
-3. Simple APIs win
+```typescript
+import { KixagoClient } from '@kixago/sdk';
 
-[Continue to Quick Start →](./quickstart/setup)
+const client = new KixagoClient({ apiKey: 'kixakey_...' });
+const risk = await client.portfolio.getRiskScore('0x...');
+
+console.log(risk.defiScore.score); // 467
+```
+
+### Python:
+
+```python
+from kixago import KixagoClient
+
+client = KixagoClient(api_key='kixakey_...')
+risk = client.portfolio.get_risk_score('0x...')
+
+print(risk.defi_score.score)  # 467
+```
+
+-----
+
+## Support
+
+  * Documentation: You're reading it
+  * OpenAPI Spec: [Download YAML](/openapi.yaml)
+  * Email: api@kixago.com
+  * GitHub: github.com/kixago/api-issues

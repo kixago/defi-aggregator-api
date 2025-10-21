@@ -1,0 +1,242 @@
+---
+sidebar_position: 2
+title: "🚀 5-Minute Quickstart"
+description: "Get your first DeFi credit score in 5 minutes"
+---
+
+# 🚀 5-Minute Quickstart
+
+Get up and running with Kixago in under 5 minutes.
+
+---
+
+## Step 1: Get Your API Key
+
+1. Visit [https://kixago.com/dashboard](https://kixago.com/dashboard)
+2. Sign up for a free account
+3. Copy your API key
+
+```
+kixakey_7eBHF9Ndxd_7eBHF9Ndxdq-I3q4Ds4nULLPQd-vElx9KC8fa6NDZiw
+```
+
+:::warning
+**Save your API key immediately** - it's only shown once.
+
+Never commit API keys to version control!
+:::
+
+---
+
+## Step 2: Make Your First Request
+
+Let's get a complete DeFi credit profile for a whale wallet with $2.1B in positions:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0xf0bb20865277aBd641a307eCe5Ee04E79073416C"
+```
+
+**Replace `YOUR_API_KEY`** with your actual key.
+
+**Response time:** 1-5 seconds (first request), <100ms (cached)
+
+---
+
+## Step 3: Understand the Response
+
+You'll get a comprehensive JSON response:
+
+```json
+{
+  "wallet_address": "0xf0bb20865277aBd641a307eCe5Ee04E79073416C",
+  "total_collateral_usd": 2139957718.47,
+  "total_borrowed_usd": 1905081695.88,
+  "global_health_factor": 1.067,
+  "global_ltv": 89.02,
+  "positions_at_risk_count": 2,
+  
+  "defi_score": {
+    "defi_score": 467,
+    "risk_level": "High Risk",
+    "risk_category": "HIGH_RISK",
+    
+    "risk_factors": [
+      {
+        "severity": "critical",
+        "factor": "Imminent Liquidation Risk",
+        "description": "Health factor 1.067 means position will be liquidated if collateral value drops 6.7%"
+      }
+    ],
+    
+    "recommendations": {
+      "immediate": [
+        "🚨 URGENT: Deposit $381M more collateral OR repay debt to raise health factor above 1.5"
+      ]
+    },
+    
+    "liquidation_simulation": {
+      "scenarios": [
+        {
+          "event": "Collateral drops 10%",
+          "new_health_factor": 0.961,
+          "status": "LIQUIDATED",
+          "estimated_loss": "~$214M in liquidation penalties"
+        }
+      ]
+    }
+  },
+  
+  "lending_positions": [
+    {
+      "protocol": "Aave",
+      "protocol_version": "V3",
+      "chain": "Ethereum",
+      "collateral_usd": 2077178086.09,
+      "borrowed_usd": 1853661183.91,
+      "health_factor": 1.065,
+      "is_at_risk": true
+    }
+  ]
+}
+```
+
+**Key insights:**
+- **DeFi Score: 467** = High Risk (like a FICO score)
+- **Health Factor: 1.067** = Liquidation if collateral drops 6.7%
+- **LTV: 89%** = Extreme leverage
+- **Risk: CRITICAL** = Immediate action needed
+
+[See complete response structure →](/api/understanding-responses/overview)
+
+---
+
+## Step 4: Use It in Code
+
+### JavaScript/TypeScript
+
+```javascript
+const KIXAGO_API_KEY = process.env.KIXAGO_API_KEY;
+
+async function getRiskProfile(address) {
+  const response = await fetch(
+    `https://api.kixago.com/v1/risk-profile/${address}`,
+    {
+      headers: { 'X-API-Key': KIXAGO_API_KEY }
+    }
+  );
+  
+  return await response.json();
+}
+
+// Usage
+const profile = await getRiskProfile('0xf0bb...');
+console.log(`DeFi Score: ${profile.defi_score.defi_score}`);
+console.log(`Risk Level: ${profile.defi_score.risk_level}`);
+```
+
+[More code examples →](/api/examples/javascript)
+
+---
+
+## What's Included in the Response?
+
+Every API call returns:
+
+| Section | What You Get |
+|---------|--------------|
+| **Portfolio Summary** | Total collateral, debt, health factor, LTV |
+| **DeFi Credit Score** | 300-850 FICO-style score with risk level |
+| **Risk Factors** | Specific issues (liquidation risk, leverage, etc.) |
+| **Recommendations** | Immediate, short-term, long-term actions |
+| **Liquidation Scenarios** | What-if price drop simulations |
+| **Individual Positions** | Per-protocol breakdown (Aave, Compound, MakerDAO) |
+| **Token Details** | Collateral and debt token-by-token |
+
+[Complete field documentation →](/api/understanding-responses/overview)
+
+---
+
+## Score Ranges (300-850)
+
+| Score | Risk Level | Meaning |
+|-------|------------|---------|
+| 750-850 | Very Low Risk | 🟢 Healthy positions |
+| 650-749 | Low Risk | 🔵 Conservative |
+| 550-649 | Medium Risk | 🟡 Moderate leverage |
+| 450-549 | High Risk | 🟠 Danger zone |
+| 300-449 | Very High Risk | 🔴 Critical |
+
+[How scoring works →](/api/understanding-responses/defi-score)
+
+---
+
+## Supported Protocols
+
+| Protocol | Versions | Chains |
+|----------|----------|--------|
+| Aave | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| Compound | V2, V3 | Ethereum, Base, Arbitrum, Polygon |
+| MakerDAO | Vaults | Ethereum |
+
+---
+
+## Authentication
+
+Include your API key in the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.kixago.com/v1/risk-profile/0x..."
+```
+
+[See all authentication methods →](/api/authentication)
+
+---
+
+## Common Issues
+
+### ❌ "missing or invalid API key"
+
+**Fix:** Include the `X-API-Key` header in your request.
+
+### ❌ "invalid address format"
+
+**Fix:** Address must be 42 characters (0x + 40 hex) or a valid ENS name.
+
+### ⚠️ Empty `lending_positions`
+
+**This is normal** - the wallet has no DeFi positions.
+
+[Full error handling guide →](/api/guides/error-handling)
+
+---
+
+## Next Steps
+
+<div className="button-group">
+  <a href="/api/endpoints/risk-profile" className="button button--primary button--lg">
+    📖 Complete API Reference
+  </a>
+  <a href="/api/understanding-responses/overview" className="button button--secondary button--lg">
+    🔍 Response Structure
+  </a>
+  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+    💻 Code Examples
+  </a>
+</div>
+
+---
+
+## Need Help?
+
+- **Email:** api@kixago.com
+- **OpenAPI Spec:** [Download YAML](/openapi.yaml)
+- **GitHub:** [Report issues](https://github.com/kixago/api-issues)
+
+---
+
+**You're ready to build! 🚀**
+```
+
+---

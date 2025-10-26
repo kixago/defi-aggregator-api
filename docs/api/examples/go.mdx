@@ -1190,9 +1190,9 @@ func main() {
     r := mux.NewRouter()
     
     // Routes
-    r.HandleFunc("/api/wallet/{address}", GetWalletProfileHandler).Methods("GET")
-    r.HandleFunc("/api/underwrite", UnderwriteHandler).Methods("POST")
-    r.HandleFunc("/api/monitor", MonitorHandler).Methods("POST")
+    r.HandleFunc("(/docs/api/wallet/{address}", GetWalletProfileHandler).Methods("GET")
+    r.HandleFunc("(/docs/api/underwrite", UnderwriteHandler).Methods("POST")
+    r.HandleFunc("(/docs/api/monitor", MonitorHandler).Methods("POST")
     r.HandleFunc("/health", HealthHandler).Methods("GET")
     
     // Start server
@@ -1394,13 +1394,13 @@ func TestUnderwriteBorrower(t *testing.T) {
 ## Next Steps
 
 <div className="button-group">
-  <a href="/api/examples/javascript" className="button button--primary button--lg">
+  <a href="(/docs/api/examples/javascript" className="button button--primary button--lg">
     📜 JavaScript Examples
   </a>
-  <a href="/api/examples/python" className="button button--secondary button--lg">
+  <a href="(/docs/api/examples/python" className="button button--secondary button--lg">
     🐍 Python Examples
   </a>
-  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+  <a href="(/docs/api/guides/best-practices" className="button button--secondary button--lg">
     ✨ Best Practices Guide
   </a>
 </div>

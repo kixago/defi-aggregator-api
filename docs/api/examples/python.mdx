@@ -1095,7 +1095,7 @@ class MonitorRequest(BaseModel):
 
 
 # Endpoints
-@app.get("/api/wallet/{address}", response_model=RiskProfileResponse)
+@app.get("(/docs/api/wallet/{address}", response_model=RiskProfileResponse)
 async def get_wallet_profile(address: str):
     """Get complete risk profile for a wallet."""
     try:
@@ -1116,7 +1116,7 @@ async def get_wallet_profile(address: str):
         raise HTTPException(status_code=e.status_code or 500, detail=str(e))
 
 
-@app.post("/api/underwrite")
+@app.post("(/docs/api/underwrite")
 async def underwrite(request: UnderwriteRequest):
     """Underwrite a borrower."""
     try:
@@ -1130,7 +1130,7 @@ async def underwrite(request: UnderwriteRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/monitor")
+@app.post("(/docs/api/monitor")
 async def monitor(request: MonitorRequest):
     """Monitor multiple wallets for liquidation risk."""
     try:
@@ -1288,13 +1288,13 @@ def test_underwriting_declined_low_score(mock_response):
 ## Next Steps
 
 <div className="button-group">
-  <a href="/api/examples/go" className="button button--primary button--lg">
+  <a href="(/docs/api/examples/go" className="button button--primary button--lg">
     🔷 Go Examples
   </a>
-  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+  <a href="(/docs/api/examples/javascript" className="button button--secondary button--lg">
     📜 JavaScript Examples
   </a>
-  <a href="/api/guides/best-practices" className="button button--secondary button--lg">
+  <a href="(/docs/api/guides/best-practices" className="button button--secondary button--lg">
     ✨ Best Practices Guide
   </a>
 </div>

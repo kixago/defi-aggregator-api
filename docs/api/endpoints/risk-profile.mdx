@@ -48,7 +48,7 @@ GET https://api.kixago.com/v1/risk-profile/\{walletAddress\}
 | `X-API-Key` | Yes* | Your Kixago API key | `kixakey_7eBHF9Ndxd...` |
 | `Authorization` | Yes* | Bearer token (alternative) | `Bearer kixakey_7eBHF9Ndxd...` |
 
-*One of the two authentication headers is required. See [Authentication](/api/authentication) for details.
+*One of the two authentication headers is required. See [Authentication](/docs/api/authentication) for details.
 
 ---
 
@@ -205,7 +205,7 @@ The `score_breakdown` object shows how the final score was calculated:
 | `volatility_score` | 10% | Collateral asset risk |
 | `protocol_risk_score` | 5% | Smart contract maturity |
 
-[See complete scoring methodology →](/api/understanding-responses/defi-score)
+[See complete scoring methodology →](/docs/api/understand-responses/defi-score)
 
 ---
 
@@ -919,7 +919,7 @@ X-RateLimit-Remaining: 7
 X-RateLimit-Reset: 1705334400
 ```
 
-[See rate limits →](/api/authentication#rate-limits)
+[See rate limits →](/docs/api/authentication#rate-limits)
 
 ---
 
@@ -1061,13 +1061,13 @@ async function generateClientReport(clientAddress: string) {
 ## Next Steps
 
 <div className="button-group">
-  <a href="/api/understanding-responses/overview" className="button button--primary button--lg">
+  <a href="(/docs/api/understand-responses/overview" className="button button--primary button--lg">
     🔍 Response Structure Deep-Dive
   </a>
-  <a href="/api/understanding-responses/defi-score" className="button button--secondary button--lg">
+  <a href="(/docs/api/understand-responses/defi-score" className="button button--secondary button--lg">
     🧮 How Scoring Works
   </a>
-  <a href="/api/examples/javascript" className="button button--secondary button--lg">
+  <a href="(/docs/api/examples/javascript" className="button button--secondary button--lg">
     💻 More Code Examples
   </a>
 </div>

@@ -1,10 +1,3 @@
-You're absolutely right\! My apologies for over-integrating.
-
-The goal is to reformat the provided content block into a clean, correct **MDX file** (`docs/api/index.mdx`) suitable for a Docusaurus or similar documentation site, while incorporating the subtle updates from your reference files (like confirming the final whale score of **467** is the intended value for the quick example).
-
-Here is the complete content, rewritten in the requested MDX format:
-
-````mdx
 ---
 sidebar_position: 1
 sidebar_label: "API Overview"
@@ -25,7 +18,7 @@ Get complete portfolio analysis across all major DeFi protocols and chains in a 
 | Data | Response Time | Coverage |
 | :--- | :--- | :--- |
 | **DeFi Credit Score** (300-850) | 1-4 seconds | Aave V2/V3, Compound V2/V3, MakerDAO |
-| **Complete lending positions** | Cached: <100ms | Ethereum, Base, Arbitrum, Polygon |
+| **Complete lending positions** | Cached: `<100ms` | Ethereum, Base, Arbitrum, Polygon |
 | **Liquidation scenarios** | | Token-level collateral/debt breakdown |
 | **Risk factors + recommendations** | | Real-time on-chain data (30s cache) |
 
@@ -149,9 +142,13 @@ The score is calculated from **5 weighted components**:
 
 $$
 \text{Internal Score} \; (0-100) = \sum (\text{Component Score} \times \text{Weight})
-$$$$
+$$
+
+$$
 \text{Final Score} = (\text{Internal Score} \times 5.5) + 300
-$$### Example calculation for the whale wallet above:
+$$
+
+### Example calculation for the whale wallet above:
 
 | Component | Calculation | Weighted Score |
 | :--- | :--- | :--- |
@@ -272,7 +269,7 @@ Based on actual production data:
 
 | Scenario | Duration | Notes |
 | :--- | :--- | :--- |
-| **Cache HIT** | \<100ms | Served from cache (30s TTL) |
+| **Cache HIT** | `<100ms` | Served from cache (30s TTL) |
 | **Cache MISS** | 1-4 seconds | Full multi-chain aggregation |
 | **Single chain** | 1-2 seconds | e.g., Ethereum only |
 | **Multi-chain** | 2-4 seconds | Concurrent fetching |
@@ -328,9 +325,7 @@ for (const whale of whales) {
   const risk = await kixago.getRiskProfile(whale);
     
   if (risk.global_health_factor < 1.15) {
-    alert(`🚨 Liquidation opportunity: ${whale}
-           Collateral: $${risk.total_collateral_usd}
-           Buffer: ${risk.defi_score.liquidation_simulation.buffer_percentage}%`);
+    alert(`🚨 Liquidation opportunity: ${whale}\nCollateral: $${risk.total_collateral_usd}\nBuffer: ${risk.defi_score.liquidation_simulation.buffer_percentage}%`);
   }
 }
 ```

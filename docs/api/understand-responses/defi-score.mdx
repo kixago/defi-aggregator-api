@@ -93,7 +93,7 @@ else                           score = 0;    // Liquidated
 | **1.5 - 2.0** | 80 | Safe | Can drop 33-50% |
 | **1.3 - 1.5** | 60 | Moderate | Can drop 23-33% |
 | **1.1 - 1.3** | 40 | Risky | Can drop 9-23% |
-| **1.0 - 1.1** | 20 | **DANGER ZONE** | Can drop <9% |
+| **1.0 - 1.1** | 20 | **DANGER ZONE** | Can drop ``<9%`` |
 | **< 1.0** | 0 | Liquidated | Already liquidating |
 
 ### Reasoning
@@ -104,7 +104,7 @@ else                           score = 0;    // Liquidated
     "component_score": 20,
     "weight": 0.4,
     "weighted_contribution": 8.0,
-    "reasoning": "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with <10% price drop."
+    "reasoning": "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with `<10%` price drop."
   }
 }
 ```

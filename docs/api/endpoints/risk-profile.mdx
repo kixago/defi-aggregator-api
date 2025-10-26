@@ -1,10 +1,10 @@
 ---
 sidebar_position: 1
-title: "GET /v1/risk-profile/{wallet}"
+title: 'GET /v1/risk-profile/{wallet}'
 description: "Get complete DeFi credit profile and risk score"
 ---
 
-# GET /v1/risk-profile/{wallet}
+# GET /v1/risk-profile/\{wallet\}
 
 Get a complete DeFi credit profile for any wallet address, including FICO-style credit score, lending positions across all protocols/chains, risk analysis, and liquidation scenarios.
 
@@ -13,7 +13,7 @@ Get a complete DeFi credit profile for any wallet address, including FICO-style 
 ## Endpoint
 
 ```
-GET https://api.kixago.com/v1/risk-profile/{walletAddress}
+GET https://api.kixago.com/v1/risk-profile/\{walletAddress\}
 ```
 
 **Authentication:** Required (API key)
@@ -448,7 +448,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
         "component_score": 20,
         "weight": 0.4,
         "weighted_contribution": 8.0,
-        "reasoning": "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with <10% price drop."
+        "reasoning": "Health factor 1.0-1.1 is DANGER ZONE. Position can be liquidated with `<10%` price drop."
       },
       "leverage_score": {
         "component_score": 20,
@@ -905,7 +905,7 @@ X-Cache-Status: HIT
 
 **Values:**
 - `MISS` - Fresh data fetched from blockchain (1-5 seconds)
-- `HIT` - Served from cache (<100ms)
+- `HIT` - Served from cache (`<100ms`)
 
 **Cache TTL:** 30 seconds
 
@@ -931,7 +931,7 @@ Based on production data:
 
 | Scenario | Duration | Details |
 |----------|----------|---------|
-| **Cache HIT** | <100ms | Served from Valkey cache |
+| **Cache HIT** | `<100ms` | Served from Valkey cache |
 | **Cache MISS (single chain)** | 1-2s | Ethereum only |
 | **Cache MISS (multi-chain)** | 2-5s | Concurrent fetching |
 | **Timeout** | 30s max | Graceful degradation |

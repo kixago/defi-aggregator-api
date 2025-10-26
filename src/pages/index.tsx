@@ -22,7 +22,7 @@ function HomepageHeader() {
             </Link>
             <Link
               className="button button--secondary button--lg btn-hero-secondary"
-              to="/docs/api">
+              to="/docs/intro">
               View API Reference →
             </Link>
           </div>
@@ -343,7 +343,7 @@ function CTASection() {
             </Link>
             <Link
               className="button button--secondary button--lg btn-hero-secondary"
-              to="/docs/api">
+              to="/docs/intro">
               Read Documentation
             </Link>
           </div>
